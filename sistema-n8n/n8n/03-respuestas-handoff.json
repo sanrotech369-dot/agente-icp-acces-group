@@ -1,0 +1,129 @@
+{
+  "name": "ICP · 03 Respuestas + Handoff + Agenda",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Respuestas + Handoff + Agenda\nCada 10 min: detecta respuestas de leads conocidos, clasifica, aplica candado de decisor, agenda reunión (Calendar) y marca lead_handoff cuando hay requerimiento (sale a comercial). Deja borrador de contestación en Outlook.\nCredenciales: Outlook, Google Sheets, Google Calendar, Header Auth (Anthropic). Reemplaza REEMPLAZA_SHEET_ID.",
+        "height": 280, "width": 440
+      },
+      "id": "note1", "name": "Guía", "type": "n8n-nodes-base.stickyNote", "typeVersion": 1, "position": [-180, -60]
+    },
+    {
+      "parameters": { "rule": { "interval": [ { "field": "cronExpression", "expression": "*/10 8-19 * * 1-5" } ] } },
+      "id": "trigger", "name": "Cada 10 min", "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1.2, "position": [300, 220]
+    },
+    {
+      "parameters": { "resource": "message", "operation": "getAll", "limit": 15, "filtersUI": { "values": { "readStatus": "unread" } }, "options": {} },
+      "id": "getmsgs", "name": "Outlook: no leídos", "type": "n8n-nodes-base.microsoftOutlook", "typeVersion": 2, "position": [520, 220]
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "value": "REEMPLAZA_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "Leads", "mode": "name" },
+        "filtersUI": { "values": [ { "lookupColumn": "Correo", "lookupValue": "={{ $json.from.emailAddress.address }}" } ] },
+        "options": {}
+      },
+      "id": "find", "name": "Buscar lead", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [740, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $json;\nconst msg = $('Outlook: no leídos').item.json;\nif (!lead || !lead.ID_Lead) return [];\nconst hoy = $now.toFormat('yyyy-LL-dd');\nconst texto = (msg.body && msg.body.content) ? msg.body.content : (msg.bodyPreview||'');\nconst system = [\n'<identidad>Agente de ACCES GROUP (Ricardo Varela) manejando la respuesta de un prospecto. Consultiva, sin presion, sin precio prematuro, sin inventar.</identidad>',\n'<frontera>Fabricamos y calificamos hasta el 1er contacto. Si el prospecto responde con requerimiento/inquietud real -> LEAD, nuevo_estado=lead_handoff (sale a comercial). Reunion aceptada != trato ganado.</frontera>',\n'<candado>Ninguna cuenta a lead_handoff sin Economic Buyer mapeado. Si revelan quien decide, decisor_revelado=true + nombre. Si el que responde no decide y no da al decisor -> correo de orientacion.</candado>',\n'<intenciones>interesado_agenda | requerimiento | pregunta | objecion | no_interesado | fuera_de_oficina | dio_decisor | otro</intenciones>',\n'<reglas>Espanol, max ~120 palabras, 1 CTA, sin firma. objecion: escuchar-reconocer-pregunta de diagnostico, NO descuentes, NO presiones (reactivacion si es precio). no_interesado: agradece y cierra (nurturing). fuera_de_oficina: no redactes, reprograma.</reglas>',\n'<agenda>Si interesado_agenda: decision_agenda=true, 2 franjas ISO horario laboral (evita 13-14h), zona America/Mexico_City.</agenda>',\n'<salida>SOLO este JSON sin ``` : {\"intencion\":\"\",\"decisor_revelado\":false,\"decisor_nombre\":\"\",\"nuevo_score\":0,\"nuevo_estado\":\"respondio|agendado|lead_handoff|nurturing|descartado\",\"nueva_etapa\":\"Primer contacto|Handoff comercial\",\"decision_agenda\":false,\"propuesta_reunion\":{\"titulo\":\"\",\"duracion_min\":20,\"opciones\":[]},\"asunto_respuesta\":\"\",\"cuerpo_html\":\"\",\"fecha_siguiente_paso\":\"YYYY-MM-DD\",\"razon\":\"\"}</salida>'\n].join('\\n');\nconst user = `Fecha hoy: ${hoy}\\nLead: ${lead.Empresa} — ${lead.Contacto} (${lead.Cargo}) | Micro-ICP: ${lead.Micro_ICP}\\nEtapa: ${lead.Etapa} | Score: ${lead.Score_ICP} | Decisor mapeado: ${lead.Decisor_Mapeado}\\nAsunto enviado: ${lead.Asunto}\\n\\nRespuesta del prospecto:\\n\"\"\"\\n${texto}\\n\"\"\"\\n\\nClasifica y redacta. Devuelve solo el JSON.`;\nreturn [{ json: { ...lead, msg_id: msg.id, conversationId: msg.conversationId, system, user, hoy } }];"
+      },
+      "id": "prep", "name": "Prep clasificación", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [960, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST", "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [ { "name": "anthropic-version", "value": "2023-06-01" }, { "name": "content-type", "value": "application/json" } ] },
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1400, system: $json.system, messages: [ { role: 'user', content: $json.user } ] }) }}",
+        "options": {}
+      },
+      "id": "claude", "name": "Claude: Clasificar", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1180, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const FIRMA = '<br><br><table cellpadding=\"0\" cellspacing=\"0\" style=\"font-family:Arial,sans-serif;font-size:13px;color:#333\"><tr><td style=\"padding-top:12px;border-top:2px solid #0a3d62\"><strong style=\"color:#0a3d62\">Ricardo Varela</strong><br><span style=\"color:#555\">ACCES GROUP</span><br><a href=\"mailto:rvarela@accesgroup.com.mx\" style=\"color:#0a3d62\">rvarela@accesgroup.com.mx</a></td></tr></table>';\nconst resp=$json; let text='';\ntry { text = resp.content[0].text; } catch(e){ text = resp.body ? resp.body.content[0].text : '{}'; }\ntext = text.replace(/^```json/i,'').replace(/```$/,'').trim();\nconst d = JSON.parse(text);\nconst l = $('Prep clasificación').item.json;\nd.cuerpo_final = (d.cuerpo_html||'') + FIRMA;\nconst pr = d.propuesta_reunion || {};\nconst opt = (pr.opciones && pr.opciones[0]) ? pr.opciones[0] : null;\nconst dur = pr.duracion_min || 20;\nd.reunion_titulo = pr.titulo || ('ACCES GROUP <> ' + (l.Empresa||''));\nif (opt) { d.reunion_inicio = opt; d.reunion_fin = new Date(new Date(opt).getTime()+dur*60000).toISOString().slice(0,19); }\nif (d.decisor_revelado) d.Decisor_Mapeado = 'si';\nreturn [{ json: { ...l, ...d } }];"
+      },
+      "id": "parse", "name": "Parsear", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1400, 220]
+    },
+    {
+      "parameters": {
+        "conditions": { "options": { "caseSensitive": true, "typeValidation": "loose", "version": 2 }, "combinator": "and",
+          "conditions": [ { "leftValue": "={{ $json.decision_agenda }}", "rightValue": "={{ true }}", "operator": { "type": "boolean", "operation": "true", "singleValue": true } } ] }
+      },
+      "id": "ifAgenda", "name": "¿Agendar?", "type": "n8n-nodes-base.if", "typeVersion": 2.2, "position": [1620, 220]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "calendar": { "__rl": true, "value": "primary", "mode": "id" },
+        "start": "={{ $json.reunion_inicio }}", "end": "={{ $json.reunion_fin }}",
+        "additionalFields": { "summary": "={{ $json.reunion_titulo }}", "attendeesUi": { "values": [ { "email": "={{ $json.Correo }}" } ] } }
+      },
+      "id": "gcal", "name": "Calendar: crear evento", "type": "n8n-nodes-base.googleCalendar", "typeVersion": 1.3, "position": [1840, 120]
+    },
+    {
+      "parameters": { "jsCode": "const d = $('Parsear').item.json; d.Event_Id = $json.id || ''; return [{ json: d }];" },
+      "id": "capId", "name": "Capturar Event_Id", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [2060, 120]
+    },
+    {
+      "parameters": { "jsCode": "const d=$json; if(!d.Event_Id) d.Event_Id=''; return [{ json: d }];" },
+      "id": "noId", "name": "Sin evento", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1840, 340]
+    },
+    {
+      "parameters": {
+        "resource": "draft", "operation": "create",
+        "subject": "={{ $json.asunto_respuesta }}", "bodyContent": "={{ $json.cuerpo_final }}",
+        "additionalFields": { "bodyContentType": "html", "toRecipients": "={{ $json.Correo }}" }
+      },
+      "id": "draft", "name": "Outlook: borrador respuesta", "type": "n8n-nodes-base.microsoftOutlook", "typeVersion": 2, "position": [2280, 220]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "REEMPLAZA_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "Leads", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow", "matchingColumns": ["ID_Lead"],
+          "value": {
+            "ID_Lead": "={{ $json.ID_Lead }}",
+            "Estado": "={{ $json.nuevo_estado }}",
+            "Etapa": "={{ $json.nueva_etapa }}",
+            "Score_ICP": "={{ $json.nuevo_score }}",
+            "Decisor_Mapeado": "={{ $json.Decisor_Mapeado }}",
+            "Event_Id": "={{ $json.Event_Id }}",
+            "Thread_Id": "={{ $json.conversationId }}",
+            "Ultimo_Contacto": "={{ $json.hoy }}",
+            "Fecha_Siguiente_Paso": "={{ $json.fecha_siguiente_paso }}",
+            "Canal": "correo",
+            "Notas": "={{ $json.intencion + ' | ' + $json.razon }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "upd", "name": "Actualizar lead", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [2500, 220]
+    },
+    {
+      "parameters": { "resource": "message", "operation": "update", "messageId": "={{ $json.msg_id }}", "updateFields": { "isRead": true } },
+      "id": "markread", "name": "Outlook: marcar leído", "type": "n8n-nodes-base.microsoftOutlook", "typeVersion": 2, "position": [2720, 220]
+    }
+  ],
+  "connections": {
+    "Cada 10 min": { "main": [[{ "node": "Outlook: no leídos", "type": "main", "index": 0 }]] },
+    "Outlook: no leídos": { "main": [[{ "node": "Buscar lead", "type": "main", "index": 0 }]] },
+    "Buscar lead": { "main": [[{ "node": "Prep clasificación", "type": "main", "index": 0 }]] },
+    "Prep clasificación": { "main": [[{ "node": "Claude: Clasificar", "type": "main", "index": 0 }]] },
+    "Claude: Clasificar": { "main": [[{ "node": "Parsear", "type": "main", "index": 0 }]] },
+    "Parsear": { "main": [[{ "node": "¿Agendar?", "type": "main", "index": 0 }]] },
+    "¿Agendar?": { "main": [[{ "node": "Calendar: crear evento", "type": "main", "index": 0 }], [{ "node": "Sin evento", "type": "main", "index": 0 }]] },
+    "Calendar: crear evento": { "main": [[{ "node": "Capturar Event_Id", "type": "main", "index": 0 }]] },
+    "Capturar Event_Id": { "main": [[{ "node": "Outlook: borrador respuesta", "type": "main", "index": 0 }]] },
+    "Sin evento": { "main": [[{ "node": "Outlook: borrador respuesta", "type": "main", "index": 0 }]] },
+    "Outlook: borrador respuesta": { "main": [[{ "node": "Actualizar lead", "type": "main", "index": 0 }]] },
+    "Actualizar lead": { "main": [[{ "node": "Outlook: marcar leído", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

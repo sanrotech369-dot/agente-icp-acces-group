@@ -1,0 +1,86 @@
+{
+  "name": "ICP · 04 Seguimiento cadencia 3x3x30",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Seguimiento cadencia 3×3×30\nCada mañana busca leads contactados cuya Fecha_Siguiente_Paso = hoy y con <9 toques, y redacta el siguiente toque de correo CON VALOR (prueba social / breakup). Máx 9 toques/30 días; al llegar → nurturing.\nLos toques de LinkedIn/Video se marcan como tarea manual en Notas.\nCredenciales: Google Sheets, Outlook, Header Auth (Anthropic). Reemplaza REEMPLAZA_SHEET_ID.",
+        "height": 280, "width": 440
+      },
+      "id": "note1", "name": "Guía", "type": "n8n-nodes-base.stickyNote", "typeVersion": 1, "position": [-180, -40]
+    },
+    {
+      "parameters": { "rule": { "interval": [ { "field": "cronExpression", "expression": "0 8 * * 1-5" } ] } },
+      "id": "trigger", "name": "Cada día 8:00 L-V", "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1.2, "position": [300, 220]
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "value": "REEMPLAZA_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "Leads", "mode": "name" }, "options": {}
+      },
+      "id": "readall", "name": "Leer todos los leads", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [520, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const hoy = $now.toFormat('yyyy-LL-dd');\nconst out = [];\nfor (const it of $input.all()) {\n  const l = it.json; if (!l || !l.ID_Lead) continue;\n  if (l.Estado !== 'contactado') continue;\n  if (String(l.Fecha_Siguiente_Paso).slice(0,10) !== hoy) continue;\n  if ((Number(l.Num_Toques)||0) >= 9) continue;\n  if (!String(l.Correo||'').includes('@')) continue;\n  const toque = (Number(l.Num_Toques)||0) < 3 ? 'prueba_social' : 'breakup';\n  const system = [\n'<identidad>Agente de ACCES GROUP (Ricardo Varela). Seguimiento con valor, sin presion, sin culpa, sin inventar. Regla 70/30.</identidad>',\n'<tarea>Redactar el siguiente toque de correo de la cadencia 3x3x30. PROHIBIDO \"solo dando seguimiento\", \"ya lo revisaste?\". Cada toque aporta valor/evidencia/pregunta util.</tarea>',\n'<tipo>prueba_social: aportar prueba social real del portafolio ACCES sin exagerar (clientes de alimentos: Bafar, Yakult, Verde Valle, Patron, Sesajal) y reencuadrar el dolor del sector. breakup: correo de cierre de ciclo, elegante, deja puerta abierta a reactivacion.</tipo>',\n'<reglas>Espanol de negocio, max ~100 palabras, 1 CTA suave (llamada 20 min), sin firma, HTML simple. Si es por precio, ofrece reactivacion por etapas. Propon nueva fecha_siguiente_paso (~5-7 dias) salvo breakup (entonces nurturing).</reglas>',\n'<salida>SOLO este JSON sin ``` : {\"asunto\":\"\",\"cuerpo_html\":\"\",\"cierra_ciclo\":false,\"fecha_siguiente_paso\":\"YYYY-MM-DD\",\"razon\":\"\"}</salida>'\n  ].join('\\n');\n  const user = `Fecha hoy: ${hoy}\\nLead: ${l.Empresa} — ${l.Contacto} (${l.Cargo}) | Micro-ICP: ${l.Micro_ICP}\\nTrigger: ${l.Trigger_Regulatorio} | Toques: ${l.Num_Toques} | Tipo de toque: ${toque}\\nUltimo asunto: ${l.Asunto}\\nRedacta el toque. Devuelve solo el JSON.`;\n  out.push({ json: { ...l, tipo_toque: toque, system, user, hoy } });\n}\nreturn out;"
+      },
+      "id": "filter", "name": "Filtrar vencidos hoy", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [740, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST", "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [ { "name": "anthropic-version", "value": "2023-06-01" }, { "name": "content-type", "value": "application/json" } ] },
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1000, system: $json.system, messages: [ { role: 'user', content: $json.user } ] }) }}",
+        "options": {}
+      },
+      "id": "claude", "name": "Claude: Redactar toque", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [960, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const FIRMA = '<br><br><table cellpadding=\"0\" cellspacing=\"0\" style=\"font-family:Arial,sans-serif;font-size:13px;color:#333\"><tr><td style=\"padding-top:12px;border-top:2px solid #0a3d62\"><strong style=\"color:#0a3d62\">Ricardo Varela</strong><br><span style=\"color:#555\">ACCES GROUP</span><br><a href=\"mailto:rvarela@accesgroup.com.mx\" style=\"color:#0a3d62\">rvarela@accesgroup.com.mx</a></td></tr></table>';\nconst resp=$json; let text='';\ntry { text = resp.content[0].text; } catch(e){ text = resp.body ? resp.body.content[0].text : '{}'; }\ntext = text.replace(/^```json/i,'').replace(/```$/,'').trim();\nconst d = JSON.parse(text);\nconst l = $('Filtrar vencidos hoy').item.json;\nd.cuerpo_final = (d.cuerpo_html||'') + FIRMA;\nd.nuevo_estado = d.cierra_ciclo ? 'nurturing' : 'contactado';\nreturn [{ json: { ...l, ...d } }];"
+      },
+      "id": "parse", "name": "Parsear + firma", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1180, 220]
+    },
+    {
+      "parameters": {
+        "resource": "draft", "operation": "create",
+        "subject": "={{ $json.asunto }}", "bodyContent": "={{ $json.cuerpo_final }}",
+        "additionalFields": { "bodyContentType": "html", "toRecipients": "={{ $json.Correo }}" }
+      },
+      "id": "draft", "name": "Outlook: borrador toque", "type": "n8n-nodes-base.microsoftOutlook", "typeVersion": 2, "position": [1400, 220]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "REEMPLAZA_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "Leads", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow", "matchingColumns": ["ID_Lead"],
+          "value": {
+            "ID_Lead": "={{ $json.ID_Lead }}",
+            "Estado": "={{ $json.nuevo_estado }}",
+            "Cadencia_Paso": "={{ (Number($json.Cadencia_Paso)||3) + 1 }}",
+            "Num_Toques": "={{ (Number($json.Num_Toques)||0) + 1 }}",
+            "Ultimo_Contacto": "={{ $json.hoy }}",
+            "Fecha_Siguiente_Paso": "={{ $json.fecha_siguiente_paso }}",
+            "Asunto": "={{ $json.asunto }}",
+            "Notas": "={{ 'seguimiento:' + $json.tipo_toque + ' | ' + $json.razon }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "upd", "name": "Actualizar toque", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [1620, 220]
+    }
+  ],
+  "connections": {
+    "Cada día 8:00 L-V": { "main": [[{ "node": "Leer todos los leads", "type": "main", "index": 0 }]] },
+    "Leer todos los leads": { "main": [[{ "node": "Filtrar vencidos hoy", "type": "main", "index": 0 }]] },
+    "Filtrar vencidos hoy": { "main": [[{ "node": "Claude: Redactar toque", "type": "main", "index": 0 }]] },
+    "Claude: Redactar toque": { "main": [[{ "node": "Parsear + firma", "type": "main", "index": 0 }]] },
+    "Parsear + firma": { "main": [[{ "node": "Outlook: borrador toque", "type": "main", "index": 0 }]] },
+    "Outlook: borrador toque": { "main": [[{ "node": "Actualizar toque", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

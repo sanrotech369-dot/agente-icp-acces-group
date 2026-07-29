@@ -17,8 +17,11 @@ sistema-n8n/
 │   ├── 01-prescore.md         ← pre-score ICP Real v1 (0–100)
 │   └── 02-primer-contacto.md  ← redacción 1er contacto + ganchos por sector
 ├── n8n/
-│   ├── 01-prescore-bases.json ← pre-califica bases → ABORDAR/SEGUNDA_OLA/NURTURING
-│   └── 02-primer-contacto.json← mar–jue 8:30–10:30, ≤15/día, borrador Outlook
+│   ├── 01-prescore-bases.json     ← pre-califica bases → ABORDAR/SEGUNDA_OLA/NURTURING
+│   ├── 02-primer-contacto.json    ← mar–jue 8:30–10:30, ≤15/día, borrador Outlook
+│   ├── 03-respuestas-handoff.json ← respuesta → clasifica, agenda, candado, handoff
+│   ├── 04-seguimiento-cadencia.json ← toques 3×3×30 con valor (prueba social/breakup)
+│   └── 05-reporte-marcador.json   ← marcador diario + recomendaciones a Ricardo
 └── firma/
     └── firma-ricardo-varela.html
 ```
@@ -57,14 +60,18 @@ cron a `* 9-10 * * 1-5`, el gate y el tope. Dime cuál prefieres y lo dejo fijo.
 
 ---
 
-## Pendiente de construir (siguiente iteración)
-- **03 Respuestas + handoff + agenda:** al responder → clasifica, aplica candado de decisor,
-  agenda reunión (Calendar) y marca `lead_handoff` (sale a comercial).
-- **04 Seguimiento cadencia 3×3×30:** avanza los toques de correo; marca tareas manuales de
-  LinkedIn/video.
-- **05 Reporte / marcador:** contactadas, ganados, sin respuesta, tarjetas listas, pipeline.
+## Flujo completo (5 workflows) — LISTO ✅
+1. **01 Pre-score** de bases → ABORDAR/SEGUNDA_OLA/NURTURING.
+2. **02 Primer contacto** mar–jue 8:30–10:30, ≤15/día, borrador Outlook con ganchos.
+3. **03 Respuestas + handoff + agenda** → clasifica, candado de decisor, agenda (Calendar),
+   marca `lead_handoff` (sale a comercial).
+4. **04 Seguimiento cadencia 3×3×30** → toques de correo con valor; máx 9/30 días → nurturing.
+5. **05 Reporte / marcador** → embudo, alertas y 3 recomendaciones, diario a Ricardo.
+
+## Pendiente (siguiente iteración)
 - **Ingesta de las 147 bases crudas** (ya clasificadas en `Bases_Crudas` del índice maestro)
-  → extрае empresas/correos → pre-score → Leads.
+  → extrae empresas/correos → pre-score → Leads. Hoy el pre-score (01) ya está listo; falta
+  el extractor que convierte cada `*_extraccion_forense.md` en filas de Leads.
 
 ## Setup
 Mismo procedimiento que la guía de instalación (n8n gratis, credenciales Google/Outlook/
