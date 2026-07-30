@@ -4,54 +4,137 @@
     {
       "parameters": {
         "content": "## Pre-Score de bases\nEjecuta a demanda (o al cargar una base). Lee Leads con Estado=sin_prescore, aplica el pre-score ICP Real v1 (Sector30+Regulatorio30+Tamaño20+Geo10+Señal10) y marca ABORDAR/SEGUNDA_OLA/NURTURING.\nCredenciales: Google Sheets OAuth, Header Auth (x-api-key Anthropic).\nReemplaza REEMPLAZA_SHEET_ID.",
-        "height": 260, "width": 420
+        "height": 260,
+        "width": 420
       },
-      "id": "note1", "name": "Guía", "type": "n8n-nodes-base.stickyNote", "typeVersion": 1, "position": [-160, -40]
+      "id": "note1",
+      "name": "Guía",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -40
+      ]
     },
     {
       "parameters": {},
-      "id": "trigger", "name": "Ejecutar pre-score", "type": "n8n-nodes-base.manualTrigger", "typeVersion": 1, "position": [320, 220]
+      "id": "trigger",
+      "name": "Ejecutar pre-score",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        320,
+        220
+      ]
     },
     {
       "parameters": {
-        "documentId": { "__rl": true, "value": "REEMPLAZA_SHEET_ID", "mode": "id" },
-        "sheetName": { "__rl": true, "value": "Leads", "mode": "name" },
-        "filtersUI": { "values": [ { "lookupColumn": "Estado", "lookupValue": "sin_prescore" } ] },
+        "documentId": {
+          "__rl": true,
+          "value": "REEMPLAZA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Estado",
+              "lookupValue": "sin_prescore"
+            }
+          ]
+        },
         "options": {}
       },
-      "id": "read", "name": "Leer sin_prescore", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [540, 220]
+      "id": "read",
+      "name": "Leer sin_prescore",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        540,
+        220
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const l = $json;\nconst system = [\n'<identidad>Motor de Leads Calificados de ACCES GROUP (ICP Real v1, validado con cierres reales). No inventas; lo desconocido puntua bajo.</identidad>',\n'<micro_icp>ICP-1 Gasolineras (Anexo 21 SAT) · ICP-2 Financiero (CNBV) · ICP-3 Manufactura/Alimentos/Confiteria (Occidente). En observacion (cap 65): BPO, Paytech, Transporte.</micro_icp>',\n'<prescore>Pre_Score 0-100 = Sector(30:ICP-1=30,ICP-2=27,ICP-3=24,observacion=15,otro=5) + Regulatorio(30:Anexo21=30,CNBV=27,otra norma=15,ninguna=0) + Tamano(20:en rango=20,cercano=10,fuera/desconocido=5) + Geografia(10:Occidente=10,resto MX=7,fuera=3) + Senal(10:trigger=10,contacto TI/seguridad=6,generales=2). Cap 65 observacion, cap 40 aliado sin presentacion. >=70 ABORDAR, 50-69 SEGUNDA_OLA, <50 NURTURING.</prescore>',\n'<reglas>Correos viejos (2003) o adivinados = VETADOS (correo_valido=false). Decision fuera de Mexico sin sponsor = NURTURING.</reglas>',\n'<salida>SOLO este JSON sin ``` : {\"micro_icp\":\"ICP-1|ICP-2|ICP-3|OBSERVACION|OTRO\",\"pre_score\":0,\"decision\":\"ABORDAR|SEGUNDA_OLA|NURTURING\",\"trigger_regulatorio\":\"\",\"gancho\":\"\",\"correo_valido\":true,\"razon\":\"\"}</salida>'\n].join('\\n');\nconst user = `Registro: Empresa=${l.Empresa} | Sector=${l.Sector||''} | Pais=${l.Pais||''} | Contacto=${l.Contacto||''} (${l.Cargo||''}) | Correo=${l.Correo||''} | Datos=${l.Notas||''}\\nPre-califica. Devuelve solo el JSON.`;\nreturn [{ json: { ...l, system, user } }];"
+        "jsCode": "const out = [];\nfor (const it of $input.all()) {\n  const l = it.json;\n  const system = [\n'<identidad>Motor de Leads Calificados de ACCES GROUP (ICP Real v1, validado con cierres reales). No inventas; lo desconocido puntua bajo.</identidad>',\n'<micro_icp>ICP-1 Gasolineras (Anexo 21 SAT) · ICP-2 Financiero (CNBV) · ICP-3 Manufactura/Alimentos/Confiteria (Occidente). En observacion (cap 65): BPO, Paytech, Transporte.</micro_icp>',\n'<prescore>Pre_Score 0-100 = Sector(30:ICP-1=30,ICP-2=27,ICP-3=24,observacion=15,otro=5) + Regulatorio(30:Anexo21=30,CNBV=27,otra norma=15,ninguna=0) + Tamano(20:en rango=20,cercano=10,fuera/desconocido=5) + Geografia(10:Occidente=10,resto MX=7,fuera=3) + Senal(10:trigger=10,contacto TI/seguridad=6,generales=2). Cap 65 observacion, cap 40 aliado sin presentacion. >=70 ABORDAR, 50-69 SEGUNDA_OLA, <50 NURTURING.</prescore>',\n'<reglas>Correos viejos (2003) o adivinados = VETADOS (correo_valido=false). Decision fuera de Mexico sin sponsor = NURTURING.</reglas>',\n'<salida>SOLO este JSON sin backticks : {\"micro_icp\":\"ICP-1|ICP-2|ICP-3|OBSERVACION|OTRO\",\"pre_score\":0,\"decision\":\"ABORDAR|SEGUNDA_OLA|NURTURING\",\"trigger_regulatorio\":\"\",\"gancho\":\"\",\"correo_valido\":true,\"razon\":\"\"}</salida>'\n  ].join('\\n');\n  const user = `Registro: Empresa=${l.Empresa} | Sector=${l.Sector||''} | Pais=${l.Pais||''} | Contacto=${l.Contacto||''} (${l.Cargo||''}) | Correo=${l.Correo||''} | Datos=${l.Notas||''}\\nPre-califica. Devuelve solo el JSON.`;\n  out.push({ json: { ...l, system, user } });\n}\nreturn out;"
       },
-      "id": "prep", "name": "Prep pre-score", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [760, 220]
+      "id": "prep",
+      "name": "Prep pre-score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        220
+      ]
     },
     {
       "parameters": {
-        "method": "POST", "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [ { "name": "anthropic-version", "value": "2023-06-01" }, { "name": "content-type", "value": "application/json" } ] },
-        "sendBody": true, "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 800, system: $json.system, messages: [ { role: 'user', content: $json.user } ] }) }}",
         "options": {}
       },
-      "id": "claude", "name": "Claude: Pre-Score", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [980, 220]
+      "id": "claude",
+      "name": "Claude: Pre-Score",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        220
+      ]
     },
     {
       "parameters": {
         "jsCode": "const resp = $json; let text='';\ntry { const _b = resp.content || (resp.body && resp.body.content) || []; const _t = _b.find(x => x && x.type === 'text'); text = _t ? _t.text : '{}'; } catch(e){ text = '{}'; }\ntext = text.replace(/^```json/i,'').replace(/```$/,'').trim();\nconst d = JSON.parse(text);\nconst l = $('Prep pre-score').item.json;\nd.nuevo_estado = (!d.correo_valido) ? 'descartado' : (d.decision==='ABORDAR' ? 'pendiente' : (d.decision==='SEGUNDA_OLA' ? 'segunda_ola' : 'nurturing'));\nreturn [{ json: { ...l, ...d } }];"
       },
-      "id": "parse", "name": "Parsear", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1200, 220]
+      "id": "parse",
+      "name": "Parsear",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        220
+      ]
     },
     {
       "parameters": {
         "operation": "update",
-        "documentId": { "__rl": true, "value": "REEMPLAZA_SHEET_ID", "mode": "id" },
-        "sheetName": { "__rl": true, "value": "Leads", "mode": "name" },
+        "documentId": {
+          "__rl": true,
+          "value": "REEMPLAZA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
         "columns": {
-          "mappingMode": "defineBelow", "matchingColumns": ["ID_Lead"],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "ID_Lead"
+          ],
           "value": {
             "ID_Lead": "={{ $json.ID_Lead }}",
             "Micro_ICP": "={{ $json.micro_icp }}",
@@ -65,15 +148,74 @@
         },
         "options": {}
       },
-      "id": "upd", "name": "Actualizar pre-score", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [1420, 220]
+      "id": "upd",
+      "name": "Actualizar pre-score",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1420,
+        220
+      ]
     }
   ],
   "connections": {
-    "Ejecutar pre-score": { "main": [[{ "node": "Leer sin_prescore", "type": "main", "index": 0 }]] },
-    "Leer sin_prescore": { "main": [[{ "node": "Prep pre-score", "type": "main", "index": 0 }]] },
-    "Prep pre-score": { "main": [[{ "node": "Claude: Pre-Score", "type": "main", "index": 0 }]] },
-    "Claude: Pre-Score": { "main": [[{ "node": "Parsear", "type": "main", "index": 0 }]] },
-    "Parsear": { "main": [[{ "node": "Actualizar pre-score", "type": "main", "index": 0 }]] }
+    "Ejecutar pre-score": {
+      "main": [
+        [
+          {
+            "node": "Leer sin_prescore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer sin_prescore": {
+      "main": [
+        [
+          {
+            "node": "Prep pre-score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep pre-score": {
+      "main": [
+        [
+          {
+            "node": "Claude: Pre-Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Pre-Score": {
+      "main": [
+        [
+          {
+            "node": "Parsear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear": {
+      "main": [
+        [
+          {
+            "node": "Actualizar pre-score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  }
 }
