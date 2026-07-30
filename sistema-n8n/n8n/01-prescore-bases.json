@@ -41,7 +41,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const resp = $json; let text='';\ntry { text = resp.content[0].text; } catch(e){ text = resp.body ? resp.body.content[0].text : '{}'; }\ntext = text.replace(/^```json/i,'').replace(/```$/,'').trim();\nconst d = JSON.parse(text);\nconst l = $('Prep pre-score').item.json;\nd.nuevo_estado = (!d.correo_valido) ? 'descartado' : (d.decision==='ABORDAR' ? 'pendiente' : (d.decision==='SEGUNDA_OLA' ? 'segunda_ola' : 'nurturing'));\nreturn [{ json: { ...l, ...d } }];"
+        "jsCode": "const resp = $json; let text='';\ntry { const _b = resp.content || (resp.body && resp.body.content) || []; const _t = _b.find(x => x && x.type === 'text'); text = _t ? _t.text : '{}'; } catch(e){ text = '{}'; }\ntext = text.replace(/^```json/i,'').replace(/```$/,'').trim();\nconst d = JSON.parse(text);\nconst l = $('Prep pre-score').item.json;\nd.nuevo_estado = (!d.correo_valido) ? 'descartado' : (d.decision==='ABORDAR' ? 'pendiente' : (d.decision==='SEGUNDA_OLA' ? 'segunda_ola' : 'nurturing'));\nreturn [{ json: { ...l, ...d } }];"
       },
       "id": "parse", "name": "Parsear", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1200, 220]
     },
