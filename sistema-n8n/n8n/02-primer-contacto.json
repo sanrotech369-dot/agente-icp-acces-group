@@ -4,68 +4,171 @@
     {
       "parameters": {
         "content": "## Primer contacto\nMartes-jueves 8:30-10:30, hasta 15 borradores/día. Toma el lead pendiente de mayor Pre_Score con correo válido, redacta el 1er contacto con el gancho de su sector (cadencia 3×3×30) y lo deja como BORRADOR en Outlook.\nCredenciales: Google Sheets, Outlook, Header Auth (Anthropic).\nParámetros ajustables: cron (`* 8-10 * * 2-4`), tope 15, ventana 8:30-10:30. Para modo diario 9-10:30/60: cambia cron a `* 9-10 * * 1-5`, gate y tope.",
-        "height": 300, "width": 440
+        "height": 300,
+        "width": 440
       },
-      "id": "note1", "name": "Guía", "type": "n8n-nodes-base.stickyNote", "typeVersion": 1, "position": [-180, -60]
+      "id": "note1",
+      "name": "Guía",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        -60
+      ]
     },
     {
-      "parameters": { "rule": { "interval": [ { "field": "cronExpression", "expression": "* 8-10 * * 2-4" } ] } },
-      "id": "trigger", "name": "Cada min mar-jue 8-10", "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1.2, "position": [320, 220]
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "* 8-10 * * 2-4"
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "Cada min mar-jue 8-10",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        320,
+        220
+      ]
     },
     {
       "parameters": {
         "jsCode": "// Ventana 8:30-10:30\nconst n = $now; const h=n.hour, m=n.minute;\nconst dentro = (h===8 && m>=30) || (h===9) || (h===10 && m<=30);\nif (!dentro) return [];\nreturn [{ json: { ok: true } }];"
       },
-      "id": "gate", "name": "Ventana 8:30-10:30", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [540, 220]
+      "id": "gate",
+      "name": "Ventana 8:30-10:30",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        220
+      ]
     },
     {
       "parameters": {
-        "documentId": { "__rl": true, "value": "REEMPLAZA_SHEET_ID", "mode": "id" },
-        "sheetName": { "__rl": true, "value": "Leads", "mode": "name" },
+        "documentId": {
+          "__rl": true,
+          "value": "REEMPLAZA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
         "options": {}
       },
-      "id": "readall", "name": "Leer todos los leads", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [760, 220]
+      "id": "readall",
+      "name": "Leer todos los leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        760,
+        220
+      ]
     },
     {
       "parameters": {
         "jsCode": "// Tope diario 15 + elegir el mejor candidato pendiente con correo válido\nconst TOPE = 15;\nconst hoy = $now.toFormat('yyyy-LL-dd');\nconst rows = $input.all().map(i=>i.json).filter(r=>r && r.ID_Lead);\nconst enviadosHoy = rows.filter(r => String(r.Ultimo_Contacto).slice(0,10)===hoy && r.Estado==='contactado').length;\nif (enviadosHoy >= TOPE) return [];\nconst cand = rows.filter(r => ['pendiente','no_contactado'].includes(String(r.Estado)) && String(r.Correo||'').includes('@'));\nif (!cand.length) return [];\ncand.sort((a,b)=> (Number(b.Pre_Score)||0) - (Number(a.Pre_Score)||0));\nconst l = cand[0];\nconst system = [\n'<identidad>Agente de prospeccion de ACCES GROUP (Ricardo Varela). Consultor cercano, espanol de NEGOCIO (multa, paro, auditoria), sin jerga. Cliente = heroe, ACCES = habilitador. Regla 70/30.</identidad>',\n'<tarea>Redactar el PRIMER correo para un lead priorizado, con el gancho de su sector. Objetivo: llamada de 20 min. Vender el siguiente paso pequeno, no el proyecto.</tarea>',\n'<ganchos>ICP-1: \"El SAT ya no pide papeles, pide evidencia tecnica. Su estacion pasaria hoy la prueba de seguridad anual del Anexo 21?\". ICP-2: \"La CNBV pide evidencia, no politicas. Ya tiene agendados sus 2 pentest del ano con reporte auditable?\" (si viene de Foro Copayment, mencionarlo). ICP-3: \"Sus clientes globales ya auditan a sus proveedores. Puede demostrar sus controles cuando se los pidan?\".</ganchos>',\n'<estructura>Asunto gancho fecha/dolor (6-9 palabras). Cuerpo HTML simple ~110-140 palabras: contexto sectorial -> dolor -> solucion ACCES en 1 frase -> (si financiero) coincidimos en Foro Copayment -> CTA llamada 20 min con 2 opciones -> salida sin presion. SIN firma.</estructura>',\n'<prohibido>NO % sin universo, NO miedo regulatorio, NO cumplimiento garantizado, NO nombrar entidades afectadas, NO sobre-proponer, NO adivinar correos.</prohibido>',\n'<orientacion>Si el contacto es buzon generico o sin cargo de decision, usar correo de ORIENTACION (preguntar con quien dirigir el tema) en vez de vender.</orientacion>',\n'<salida>SOLO este JSON sin ``` : {\"tipo\":\"venta|orientacion\",\"asunto\":\"\",\"cuerpo_html\":\"\",\"cadencia_paso\":3,\"fecha_siguiente_paso\":\"YYYY-MM-DD\",\"razon\":\"\"}</salida>'\n].join('\\n');\nconst user = `Fecha hoy: ${hoy}\\nLead: ${l.Empresa} | Micro-ICP: ${l.Micro_ICP} | Contacto: ${l.Contacto} (${l.Cargo}) | Correo: ${l.Correo}\\nTrigger: ${l.Trigger_Regulatorio} | Gancho base: ${l.Gancho} | Fuente: ${l.Fuente}\\nDecisor mapeado: ${l.Decisor_Mapeado}\\nRedacta el primer contacto. Devuelve solo el JSON.`;\nreturn [{ json: { ...l, system, user, hoy } }];"
       },
-      "id": "pick", "name": "Elegir lead + tope", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [980, 220]
+      "id": "pick",
+      "name": "Elegir lead + tope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        220
+      ]
     },
     {
       "parameters": {
-        "method": "POST", "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [ { "name": "anthropic-version", "value": "2023-06-01" }, { "name": "content-type", "value": "application/json" } ] },
-        "sendBody": true, "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1200, system: $json.system, messages: [ { role: 'user', content: $json.user } ] }) }}",
         "options": {}
       },
-      "id": "claude", "name": "Claude: Redactar 1er contacto", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1200, 220]
+      "id": "claude",
+      "name": "Claude: Redactar 1er contacto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        220
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const FIRMA = '<br><br><table cellpadding=\"0\" cellspacing=\"0\" style=\"font-family:Arial,sans-serif;font-size:13px;color:#333\"><tr><td style=\"padding-top:12px;border-top:2px solid #0a3d62\"><strong style=\"color:#0a3d62\">Ricardo Varela</strong><br><span style=\"color:#555\">ACCES GROUP — Ciberseguridad · GRC · Cloud · Continuidad</span><br><a href=\"mailto:rvarela@accesgroup.com.mx\" style=\"color:#0a3d62\">rvarela@accesgroup.com.mx</a> · www.accesgroup.com.mx</td></tr></table>';\nconst resp = $json; let text='';\ntry { const _b = resp.content || (resp.body && resp.body.content) || []; const _t = _b.find(x => x && x.type === 'text'); text = _t ? _t.text : '{}'; } catch(e){ text = '{}'; }\ntext = text.replace(/^```json/i,'').replace(/```$/,'').trim();\nconst d = JSON.parse(text);\nconst l = $('Elegir lead + tope').item.json;\nd.cuerpo_final = (d.cuerpo_html||'') + FIRMA;\nreturn [{ json: { ...l, ...d } }];"
+        "jsCode": "const L='https://raw.githubusercontent.com/sanrotech369-dot/acces-assets/main/';\nconst resp = $json; let text='';\ntry { const _b = resp.content || (resp.body && resp.body.content) || []; const _t = _b.find(x => x && x.type === 'text'); text = _t ? _t.text : '{}'; } catch(e){ text = '{}'; }\ntext = text.replace(/^```json/i,'').replace(/```$/,'').trim();\nconst d = JSON.parse(text);\nconst l = $('Elegir lead + tope').item.json;\nconst contacto = (l.Contacto && String(l.Contacto).trim()) ? l.Contacto : 'estimado(a)';\nconst CUERPO = d.cuerpo_html || '';\nconst html =\n'<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;max-width:680px;\">'\n+ '<p style=\"margin:0 0 12px 0;\"><strong>CLASIFICACION: <span style=\"color:#c00;\">CONFIDENCIAL</span></strong></p>'\n+ '<p style=\"margin:0 0 16px 0;\"><img src=\"'+L+'logo.png\" alt=\"ACCES GROUP\" style=\"max-width:220px;height:auto;\"></p>'\n+ '<p style=\"margin:0 0 4px 0;\">Muy buen dia <strong>'+contacto+'</strong>,</p>'\n+ '<p style=\"margin:0 0 16px 0;\">Es un placer y un gusto saludarte.</p>'\n+ CUERPO\n+ '<p style=\"margin:16px 0 4px 0;\">Quedo atento a tus comentarios.</p>'\n+ '<p style=\"margin:0 0 20px 0;\">Saludos y excelente dia.</p>'\n+ '<p style=\"margin:0 0 8px 0;\"><img src=\"'+L+'firma.png\" alt=\"Ricardo Varela Leyva\" style=\"max-width:430px;height:auto;\"></p>'\n+ '<table cellpadding=\"0\" cellspacing=\"0\" style=\"font-size:12px;color:#333;line-height:1.5;\">'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">Mobile:</td><td>+52 33 2964 8174</td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">Oficina:</td><td>800 925 0023 ext. 101</td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">WhatsApp:</td><td><a href=\"https://wa.me/523329618174\" style=\"color:#0a3d62;\">wa.me/523329618174</a></td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">LinkedIn:</td><td><a href=\"https://www.linkedin.com/in/ricardo-varela-3793071b6/\" style=\"color:#0a3d62;\">linkedin.com/in/ricardo-varela</a></td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">Sitio:</td><td><a href=\"https://www.accesgroup.com.mx\" style=\"color:#0a3d62;\">www.accesgroup.com.mx</a></td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">e-mail:</td><td><a href=\"mailto:rvarela@accesgroup.com.mx\" style=\"color:#0a3d62;\">rvarela@accesgroup.com.mx</a></td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">Direccion:</td><td>Blvd. Puerta de Hierro #5200, Zapopan, Jalisco</td></tr>'\n+ '</table>'\n+ '<p style=\"margin:20px 0 0 0;\"><img src=\"'+L+'clientes.png\" alt=\"Algunos de nuestros clientes\" style=\"max-width:100%;height:auto;\"></p>'\n+ '<p style=\"margin:16px 0 0 0;font-size:10px;color:#999;line-height:1.4;\">Esta comunicacion contiene informacion confidencial y puede contener informacion privilegiada, para uso exclusivo del destinatario. Si usted no es el destinatario, queda prohibida cualquier distribucion, copia o uso de esta comunicacion. Si la recibio por error, notifiquelo y eliminela. Aviso de privacidad: <a href=\"https://www.accesgroup.com.mx/aviso-privacidad/\" style=\"color:#0a3d62;\">accesgroup.com.mx/aviso-privacidad</a></p>'\n+ '</div>';\nd.cuerpo_final = html;\nreturn [{ json: { ...l, ...d } }];"
       },
-      "id": "parse", "name": "Parsear + firma", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1420, 220]
+      "id": "parse",
+      "name": "Parsear + firma",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1420,
+        220
+      ]
     },
     {
       "parameters": {
-        "resource": "draft", "operation": "create",
+        "resource": "draft",
+        "operation": "create",
         "subject": "={{ $json.asunto }}",
         "bodyContent": "={{ $json.cuerpo_final }}",
-        "additionalFields": { "bodyContentType": "html", "toRecipients": "={{ $json.Correo }}" }
+        "additionalFields": {
+          "bodyContentType": "html",
+          "toRecipients": "={{ $json.Correo }}"
+        }
       },
-      "id": "draft", "name": "Outlook: borrador 1er contacto", "type": "n8n-nodes-base.microsoftOutlook", "typeVersion": 2, "position": [1640, 220]
+      "id": "draft",
+      "name": "Outlook: borrador 1er contacto",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1640,
+        220
+      ]
     },
     {
       "parameters": {
         "operation": "update",
-        "documentId": { "__rl": true, "value": "REEMPLAZA_SHEET_ID", "mode": "id" },
-        "sheetName": { "__rl": true, "value": "Leads", "mode": "name" },
+        "documentId": {
+          "__rl": true,
+          "value": "REEMPLAZA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
         "columns": {
-          "mappingMode": "defineBelow", "matchingColumns": ["ID_Lead"],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "ID_Lead"
+          ],
           "value": {
             "ID_Lead": "={{ $json.ID_Lead }}",
             "Estado": "contactado",
@@ -81,17 +184,96 @@
         },
         "options": {}
       },
-      "id": "upd", "name": "Marcar contactado", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [1860, 220]
+      "id": "upd",
+      "name": "Marcar contactado",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1860,
+        220
+      ]
     }
   ],
   "connections": {
-    "Cada min mar-jue 8-10": { "main": [[{ "node": "Ventana 8:30-10:30", "type": "main", "index": 0 }]] },
-    "Ventana 8:30-10:30": { "main": [[{ "node": "Leer todos los leads", "type": "main", "index": 0 }]] },
-    "Leer todos los leads": { "main": [[{ "node": "Elegir lead + tope", "type": "main", "index": 0 }]] },
-    "Elegir lead + tope": { "main": [[{ "node": "Claude: Redactar 1er contacto", "type": "main", "index": 0 }]] },
-    "Claude: Redactar 1er contacto": { "main": [[{ "node": "Parsear + firma", "type": "main", "index": 0 }]] },
-    "Parsear + firma": { "main": [[{ "node": "Outlook: borrador 1er contacto", "type": "main", "index": 0 }]] },
-    "Outlook: borrador 1er contacto": { "main": [[{ "node": "Marcar contactado", "type": "main", "index": 0 }]] }
+    "Cada min mar-jue 8-10": {
+      "main": [
+        [
+          {
+            "node": "Ventana 8:30-10:30",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ventana 8:30-10:30": {
+      "main": [
+        [
+          {
+            "node": "Leer todos los leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer todos los leads": {
+      "main": [
+        [
+          {
+            "node": "Elegir lead + tope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Elegir lead + tope": {
+      "main": [
+        [
+          {
+            "node": "Claude: Redactar 1er contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Redactar 1er contacto": {
+      "main": [
+        [
+          {
+            "node": "Parsear + firma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear + firma": {
+      "main": [
+        [
+          {
+            "node": "Outlook: borrador 1er contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outlook: borrador 1er contacto": {
+      "main": [
+        [
+          {
+            "node": "Marcar contactado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  }
 }
