@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Pre-Score de bases\nEjecuta a demanda (o al cargar una base). Lee Leads con Estado=sin_prescore, aplica el pre-score ICP Real v1 (Sector30+Regulatorio30+Tamaño20+Geo10+Señal10) y marca ABORDAR/SEGUNDA_OLA/NURTURING.\nCredenciales: Google Sheets OAuth, Header Auth (x-api-key Anthropic).\nReemplaza REEMPLAZA_SHEET_ID.",
+        "content": "## Pre-Score de bases\nEjecuta a demanda (o al cargar una base). Lee Leads con Estado=sin_prescore, aplica el pre-score ICP Real v1 (Sector30+Regulatorio30+Tamaño20+Geo10+Señal10) y marca ABORDAR/SEGUNDA_OLA/NURTURING.\nCredenciales: Google Sheets OAuth, Header Auth (x-api-key Anthropic).\nReemplaza 1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M.",
         "height": 260,
         "width": 420
       },
@@ -31,7 +31,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {
@@ -122,7 +122,7 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {

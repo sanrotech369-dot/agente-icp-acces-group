@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Reporte / Marcador 360\nCada tarde 18:00 lee el CRM y arma el marcador (contactadas, ganados, respondió, agendado, handoff, tarjetas listas, por micro-ICP, alertas) + recomendaciones. Llega como borrador a Ricardo.\nCredenciales: Google Sheets, Outlook, Header Auth (Anthropic). Reemplaza REEMPLAZA_SHEET_ID y REEMPLAZA_TU_CORREO.",
+        "content": "## Reporte / Marcador 360\nCada tarde 18:00 lee el CRM y arma el marcador (contactadas, ganados, respondió, agendado, handoff, tarjetas listas, por micro-ICP, alertas) + recomendaciones. Llega como borrador a Ricardo.\nCredenciales: Google Sheets, Outlook, Header Auth (Anthropic). Reemplaza 1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M y rvarela@accesgroup.com.mx.",
         "height": 260, "width": 440
       },
       "id": "note1", "name": "Guía", "type": "n8n-nodes-base.stickyNote", "typeVersion": 1, "position": [-180, -40]
@@ -14,7 +14,7 @@
     },
     {
       "parameters": {
-        "documentId": { "__rl": true, "value": "REEMPLAZA_SHEET_ID", "mode": "id" },
+        "documentId": { "__rl": true, "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M", "mode": "id" },
         "sheetName": { "__rl": true, "value": "Leads", "mode": "name" }, "options": {}
       },
       "id": "readLeads", "name": "Leer Leads", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [520, 220]
@@ -48,7 +48,7 @@
         "resource": "draft", "operation": "create",
         "subject": "={{ 'Reporte ICP ACCES — ' + $json.hoy }}",
         "bodyContent": "={{ $json.reporte_html }}",
-        "additionalFields": { "bodyContentType": "html", "toRecipients": "REEMPLAZA_TU_CORREO" }
+        "additionalFields": { "bodyContentType": "html", "toRecipients": "rvarela@accesgroup.com.mx" }
       },
       "id": "draft", "name": "Outlook: borrador reporte", "type": "n8n-nodes-base.microsoftOutlook", "typeVersion": 2, "position": [1400, 220]
     }

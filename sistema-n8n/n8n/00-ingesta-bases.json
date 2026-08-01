@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 00 · Ingesta al CRM\nManual: baja MASTER_LEADS.csv (salida del motor) y agrega al Sheet solo las cuentas de ARRANQUE (Estado=no_contactado). Para carga masiva de las 26k, importa el CSV directo a Google Sheets (Archivo→Importar). Reemplaza REEMPLAZA_SHEET_ID y la URL raw si cambia la rama.",
+        "content": "## 00 · Ingesta al CRM\nManual: baja MASTER_LEADS.csv (salida del motor) y agrega al Sheet solo las cuentas de ARRANQUE (Estado=no_contactado). Para carga masiva de las 26k, importa el CSV directo a Google Sheets (Archivo→Importar). Reemplaza 1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M y la URL raw si cambia la rama.",
         "height": 220,
         "width": 460
       },
@@ -66,7 +66,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {

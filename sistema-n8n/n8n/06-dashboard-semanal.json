@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 06 · Dashboard SEMANAL (lunes 8:00)\nCada lunes lee el CRM y arma el dashboard de la semana (tocados, respuestas, agendas, handoffs, embudo por sector/ICP, cola de enriquecimiento, proximos) + 3 recomendaciones. Borrador a Ricardo.\nCredenciales: Google Sheets, Outlook, Header Auth. Reemplaza REEMPLAZA_SHEET_ID y REEMPLAZA_TU_CORREO.",
+        "content": "## 06 · Dashboard SEMANAL (lunes 8:00)\nCada lunes lee el CRM y arma el dashboard de la semana (tocados, respuestas, agendas, handoffs, embudo por sector/ICP, cola de enriquecimiento, proximos) + 3 recomendaciones. Borrador a Ricardo.\nCredenciales: Google Sheets, Outlook, Header Auth. Reemplaza 1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M y rvarela@accesgroup.com.mx.",
         "height": 240,
         "width": 460
       },
@@ -40,7 +40,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {
@@ -126,7 +126,7 @@
         "bodyContent": "={{ $json.reporte_html }}",
         "additionalFields": {
           "bodyContentType": "html",
-          "toRecipients": "REEMPLAZA_TU_CORREO"
+          "toRecipients": "rvarela@accesgroup.com.mx"
         }
       },
       "id": "draft",

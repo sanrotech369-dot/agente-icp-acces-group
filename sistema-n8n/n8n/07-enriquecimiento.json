@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 07 · Enriquecimiento (autónomo)\nDiario: toma leads con Enriquecer=SÍ, busca en web (Serper) el canal real, Claude extrae SOLO lo verificable (no inventa), actualiza el CRM y RE-ENCOLA (Estado=no_contactado) al encontrar correo.\nCredenciales: Google Sheets, Header Auth (Anthropic), Serper (X-API-KEY). Reemplaza REEMPLAZA_SHEET_ID y REEMPLAZA_SERPER_KEY.",
+        "content": "## 07 · Enriquecimiento (autónomo)\nDiario: toma leads con Enriquecer=SÍ, busca en web (Serper) el canal real, Claude extrae SOLO lo verificable (no inventa), actualiza el CRM y RE-ENCOLA (Estado=no_contactado) al encontrar correo.\nCredenciales: Google Sheets, Header Auth (Anthropic), Serper (X-API-KEY). Reemplaza 1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M y REEMPLAZA_SERPER_KEY.",
         "height": 240,
         "width": 470
       },
@@ -40,7 +40,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {
@@ -188,7 +188,7 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {

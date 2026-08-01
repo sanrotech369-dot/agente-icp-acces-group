@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Seguimiento cadencia 3×3×30\nCada mañana busca leads contactados cuya Fecha_Siguiente_Paso = hoy y con <9 toques, y redacta el siguiente toque de correo CON VALOR (prueba social / breakup). Máx 9 toques/30 días; al llegar → nurturing.\nLos toques de LinkedIn/Video se marcan como tarea manual en Notas.\nCredenciales: Google Sheets, Outlook, Header Auth (Anthropic). Reemplaza REEMPLAZA_SHEET_ID.",
+        "content": "## Seguimiento cadencia 3×3×30\nCada mañana busca leads contactados cuya Fecha_Siguiente_Paso = hoy y con <9 toques, y redacta el siguiente toque de correo CON VALOR (prueba social / breakup). Máx 9 toques/30 días; al llegar → nurturing.\nLos toques de LinkedIn/Video se marcan como tarea manual en Notas.\nCredenciales: Google Sheets, Outlook, Header Auth (Anthropic). Reemplaza 1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M.",
         "height": 280,
         "width": 440
       },
@@ -40,7 +40,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {
@@ -143,7 +143,7 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {

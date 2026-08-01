@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 03 v2 · Respuestas → Reunión (MS365)\nCada 10 min: lee respuestas, consulta DISPONIBILIDAD real (Graph calendarView), clasifica 14 casos, agenda en MS365 con enlace de Teams automático, re-deriva al decisor, deja borradores (semi-manual). Registro en Google Sheets.\nCredenciales: Microsoft Outlook (correo+calendario, Graph), Google Sheets, Header Auth (Anthropic). Reemplaza REEMPLAZA_SHEET_ID y REEMPLAZA_BOOKING_URL.",
+        "content": "## 03 v2 · Respuestas → Reunión (MS365)\nCada 10 min: lee respuestas, consulta DISPONIBILIDAD real (Graph calendarView), clasifica 14 casos, agenda en MS365 con enlace de Teams automático, re-deriva al decisor, deja borradores (semi-manual). Registro en Google Sheets.\nCredenciales: Microsoft Outlook (correo+calendario, Graph), Google Sheets, Header Auth (Anthropic). Reemplaza 1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M y REEMPLAZA_BOOKING_URL.",
         "height": 300,
         "width": 460
       },
@@ -61,7 +61,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {
@@ -336,7 +336,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {
@@ -402,7 +402,7 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {
