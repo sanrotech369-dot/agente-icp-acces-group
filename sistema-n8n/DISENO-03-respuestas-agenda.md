@@ -6,11 +6,18 @@
 > Fiel a `contexto-icp.md`: candado de decisor, frontera de handoff, cadencia 3×3×30,
 > regla 70/30, sin inventar correos, sin precio prematuro.
 
-## 0. Realidad MS365
-El cliente usa **Microsoft 365**. Por tanto:
-- Lectura de disponibilidad y creación de citas = **Microsoft Graph / Outlook Calendar**
-  (mismas credenciales OAuth2 que el correo), NO Google Calendar.
-- Link de auto-agenda = `BOOKING_URL` en `Config` (Microsoft Bookings o Calendly).
+## 0. Realidad MS365 — TODO Microsoft, un solo acceso (regla dura)
+El cliente usa **Microsoft 365** con su correo institucional Outlook. **REGLA DURA: nada de
+Google Calendar. NADA de Google.** Todo el backend corre con **una sola credencial OAuth2
+(la de Microsoft)**:
+- **Correo** = Microsoft Outlook (Graph `sendMail`/drafts).
+- **Calendario / disponibilidad** = Microsoft Graph (`/me/calendar/getSchedule`,
+  `/me/calendarView`). Creación de cita = `/me/events`.
+- **Reunión con Teams automático** = crear el evento con `isOnlineMeeting: true` +
+  `onlineMeetingProvider: teamsForBusiness` → el enlace de Teams se genera solo y va en la cita.
+- **Registro / CRM** = **Microsoft Excel en OneDrive/SharePoint** (Graph workbook), NO Google
+  Sheets. Misma credencial. (Los flujos 01–05 se migran de nodos Google Sheets → Microsoft Excel.)
+- Link de auto-agenda = `BOOKING_URL` en `Config` (**Microsoft Bookings** de preferencia, o Calendly).
 
 ---
 
