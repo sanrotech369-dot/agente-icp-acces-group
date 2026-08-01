@@ -1,11 +1,11 @@
 {
-  "name": "ICP · 03 Respuestas + Handoff + Agenda",
+  "name": "ICP · 03 Respuestas + Agenda MS365 + Handoff (v2)",
   "nodes": [
     {
       "parameters": {
-        "content": "## Respuestas + Handoff + Agenda\nCada 10 min: detecta respuestas de leads conocidos, clasifica, aplica candado de decisor, agenda reunión (Calendar) y marca lead_handoff cuando hay requerimiento (sale a comercial). Deja borrador de contestación en Outlook.\nCredenciales: Outlook, Google Sheets, Google Calendar, Header Auth (Anthropic). Reemplaza REEMPLAZA_SHEET_ID.",
-        "height": 280,
-        "width": 440
+        "content": "## 03 v2 · Respuestas → Reunión (MS365)\nCada 10 min: lee respuestas, consulta DISPONIBILIDAD real (Graph calendarView), clasifica 14 casos, agenda en MS365 con enlace de Teams automático, re-deriva al decisor, deja borradores (semi-manual). Registro en Google Sheets.\nCredenciales: Microsoft Outlook (correo+calendario, Graph), Google Sheets, Header Auth (Anthropic). Reemplaza REEMPLAZA_SHEET_ID y REEMPLAZA_BOOKING_URL.",
+        "height": 300,
+        "width": 460
       },
       "id": "note1",
       "name": "Guía",
@@ -13,7 +13,7 @@
       "typeVersion": 1,
       "position": [
         -180,
-        -60
+        -80
       ]
     },
     {
@@ -33,7 +33,7 @@
       "typeVersion": 1.2,
       "position": [
         300,
-        220
+        240
       ]
     },
     {
@@ -54,7 +54,7 @@
       "typeVersion": 2,
       "position": [
         520,
-        220
+        240
       ]
     },
     {
@@ -85,20 +85,67 @@
       "typeVersion": 4.5,
       "position": [
         740,
-        220
+        240
       ]
     },
     {
       "parameters": {
-        "jsCode": "const out = [];\nconst msgs = $('Outlook: no leídos').all().map(i=>i.json);\nconst hoy = $now.toFormat('yyyy-LL-dd');\nfor (const it of $input.all()) {\n  const lead = it.json;\n  if (!lead || !lead.ID_Lead) continue;\n  const msg = msgs.find(m => m && m.from && m.from.emailAddress && m.from.emailAddress.address === lead.Correo) || {};\n  const texto = (msg.body && msg.body.content) ? msg.body.content : (msg.bodyPreview||'');\n  const system = [\n'<identidad>Agente de ACCES GROUP (Ricardo Varela) manejando la respuesta de un prospecto. Consultiva, sin presion, sin precio prematuro, sin inventar.</identidad>',\n'<frontera>Fabricamos y calificamos hasta el 1er contacto. Si el prospecto responde con requerimiento/inquietud real -> LEAD, nuevo_estado=lead_handoff (sale a comercial). Reunion aceptada != trato ganado.</frontera>',\n'<candado>Ninguna cuenta a lead_handoff sin Economic Buyer mapeado. Si revelan quien decide, decisor_revelado=true + nombre. Si el que responde no decide y no da al decisor -> correo de orientacion.</candado>',\n'<intenciones>interesado_agenda | requerimiento | pregunta | objecion | no_interesado | fuera_de_oficina | dio_decisor | otro</intenciones>',\n'<reglas>Espanol, max ~120 palabras, 1 CTA, sin firma. objecion: escuchar-reconocer-pregunta de diagnostico, NO descuentes, NO presiones (reactivacion si es precio). no_interesado: agradece y cierra (nurturing). fuera_de_oficina: no redactes, reprograma.</reglas>',\n'<agenda>Si interesado_agenda: decision_agenda=true, 2 franjas ISO horario laboral (evita 13-14h), zona America/Mexico_City.</agenda>',\n'<salida>SOLO este JSON sin backticks : {\"intencion\":\"\",\"decisor_revelado\":false,\"decisor_nombre\":\"\",\"nuevo_score\":0,\"nuevo_estado\":\"respondio|agendado|lead_handoff|nurturing|descartado\",\"nueva_etapa\":\"Primer contacto|Handoff comercial\",\"decision_agenda\":false,\"propuesta_reunion\":{\"titulo\":\"\",\"duracion_min\":20,\"opciones\":[]},\"asunto_respuesta\":\"\",\"cuerpo_html\":\"\",\"fecha_siguiente_paso\":\"YYYY-MM-DD\",\"razon\":\"\"}</salida>'\n  ].join('\\n');\n  const user = `Fecha hoy: ${hoy}\\nLead: ${lead.Empresa} — ${lead.Contacto} (${lead.Cargo}) | Micro-ICP: ${lead.Micro_ICP}\\nEtapa: ${lead.Etapa} | Score: ${lead.Score_ICP} | Decisor mapeado: ${lead.Decisor_Mapeado}\\nAsunto enviado: ${lead.Asunto}\\n\\nRespuesta del prospecto:\\n\"\"\"\\n${texto}\\n\"\"\"\\n\\nClasifica y redacta. Devuelve solo el JSON.`;\n  out.push({ json: { ...lead, msg_id: msg.id, conversationId: msg.conversationId, system, user, hoy } });\n}\nreturn out;"
+        "method": "GET",
+        "url": "https://graph.microsoft.com/v1.0/me/calendarView",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "startDateTime",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "name": "endDateTime",
+              "value": "={{ $now.plus({days:16}).toISO() }}"
+            },
+            {
+              "name": "$select",
+              "value": "start,end,showAs,subject"
+            },
+            {
+              "name": "$top",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "outlook.timezone=\"America/Mexico_City\""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "avail",
+      "name": "Graph: disponibilidad",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ---- Prep clasificacion v2: disponibilidad real MS365 + prompt v2 ----\nconst BOOKING_URL = 'REEMPLAZA_BOOKING_URL'; // Microsoft Bookings o Calendly\nconst leads = $('Buscar lead').all().map(i=>i.json).filter(l=>l && l.ID_Lead);\nconst msgs  = $('Outlook: no leídos').all().map(i=>i.json);\nlet events = [];\ntry { const r = $('Graph: disponibilidad').first().json; events = (r && r.value) ? r.value : []; } catch(e){ events = []; }\n// franjas libres reales (MX -06:00, sin DST): mar-jue 10-13 y 16-18, >=48h, 20 min\nfunction iso(d){ return d.toISOString(); }\nconst now = new Date();\nconst busy = events.filter(e=>e && e.start && e.end && (e.showAs!=='free'))\n  .map(e=>({s:new Date(e.start.dateTime+'-06:00'), e:new Date(e.end.dateTime+'-06:00')}));\nfunction libre(cand){ for(const b of busy){ if(cand>=b.s && cand<b.e) return false; } return true; }\nconst dias=['dom','lun','mar','mié','jue','vie','sáb'];\nconst meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];\nconst horas=[10,10.5,11,12,16,16.5,17];\nconst slotsISO=[]; const slotsTxt=[];\nfor(let dd=2; dd<=16 && slotsISO.length<4; dd++){\n  const base=new Date(now.getTime()+dd*86400000);\n  const wd=base.getUTCDay(); // aprox\n  const dow=new Date(base.toLocaleString('en-US',{timeZone:'America/Mexico_City'})).getDay();\n  if(![2,3,4].includes(dow)) continue;\n  const y=base.getFullYear(), mo=base.getMonth(), da=base.getDate();\n  for(const h of horas){\n    const hh=Math.floor(h), mm=(h%1)?30:0;\n    const cand=new Date(`${y}-${String(mo+1).padStart(2,'0')}-${String(da).padStart(2,'0')}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00-06:00`);\n    if((cand-now)<48*3600000) continue;\n    if(!libre(cand)) continue;\n    slotsISO.push(cand.toISOString());\n    slotsTxt.push(`${dias[cand.getUTCDay()]} ${da} ${meses[mo]} ${String(hh).padStart(2,'0')}:${mm?'30':'00'}`);\n    if(slotsISO.length>=4) break;\n  }\n}\nconst DISPONIBILIDAD = slotsTxt.length ? slotsTxt.join(' | ') : '(sin franjas: usar BOOKING_URL)';\nconst out=[];\nfor(const lead of leads){\n  const msg = msgs.find(m=>m && m.from && m.from.emailAddress && m.from.emailAddress.address===lead.Correo) || {};\n  const texto=(msg.body && msg.body.content)? msg.body.content : (msg.bodyPreview||'');\n  const user = `Fecha hoy: ${$now.toFormat('yyyy-LL-dd')} · Zona: America/Mexico_City\\n`\n   +`Lead: ${lead.Empresa} | Micro-ICP ${lead.Micro_ICP} | Sector ${lead.Sector} | Contacto ${lead.Contacto} (${lead.Cargo})\\n`\n   +`Gancho: ${lead.Gancho} | Trigger: ${lead.Trigger_Regulatorio} | Estado: ${lead.Estado} | Decisor_Mapeado: ${lead.Decisor_Mapeado}\\n`\n   +`BOOKING_URL: ${BOOKING_URL}\\nDISPONIBILIDAD (franjas libres reales MS365): ${DISPONIBILIDAD}\\nopciones_iso disponibles: ${JSON.stringify(slotsISO)}\\n`\n   +`--- CORREO DEL PROSPECTO ---\\nAsunto: ${msg.subject||''}\\nCuerpo:\\n[inicio]\\n${texto}\\n[fin]\\n--- Clasifica y redacta. Devuelve solo el JSON. ---`;\n  out.push({ json: { ...lead, msg_id: msg.id, conversationId: msg.conversationId, booking_url: BOOKING_URL, disponibilidad: DISPONIBILIDAD, slotsISO, system: \"<identidad>Agente de ACCES GROUP (Ricardo Varela) manejando la respuesta de un prospecto. Consultiva, espanol de NEGOCIO, sin jerga, sin presion, sin precio prematuro, sin inventar.</identidad>\\n<mision>Unico objetivo: conseguir la ENTRADA y AGENDAR una reunion de 20 min con estructura (contexto->como se resuelve->siguiente paso). Vende el siguiente paso pequeno, no el proyecto.</mision>\\n<frontera>Fabricamos y calificamos hasta el 1er contacto. Si responde con requerimiento real y hay decisor -> LEAD, nuevo_estado=lead_handoff. Reunion aceptada != trato ganado.</frontera>\\n<candado>Ninguna cuenta a lead_handoff sin Economic Buyer mapeado. Si revelan quien decide -> decisor_revelado=true + datos. Si el que responde no decide y no da al decisor -> correo de orientacion.</candado>\\n<intenciones>interesado_agenda | da_horario_especifico | requerimiento | persona_equivocada | pregunta | objecion | no_interesado | fuera_de_oficina | rebote | otro_canal | reagenda | cortes_sin_compromiso | solicita_propuesta | spam</intenciones>\\n<agenda>Para interesado_agenda/da_horario_especifico/reagenda: decision_agenda=true. NO inventes horarios: usa las franjas de {DISPONIBILIDAD}. Propon 2-3 de ESAS franjas y ofrece SIEMPRE auto-agenda {BOOKING_URL}. Solo si el cliente da/confirma UNA hora concreta pon crear_evento implicito devolviendo esa hora en opciones_iso[0] e intencion=da_horario_especifico. Si {DISPONIBILIDAD} vacia -> usar_booking_link=true.</agenda>\\n<re_derivacion>Si te mandan con otra persona y dan correo/nombre: persona_equivocada=true, decisor={nombre,correo,cargo}, quien_refirio=nombre del que respondio. cuerpo_html = intro calida al referido (menciona quien lo refirio + que resolvemos + respeto + CTA 20 min). correo_agradecimiento = 1-2 lineas al que refirio.</re_derivacion>\\n<reglas>Max ~120 palabras, 1 CTA, sin firma. objecion: escuchar-reconocer-diagnostico, sin descuento/presion (reactivacion si es precio). no_interesado: agradece y cierra (nurturing +90d). fuera_de_oficina/rebote/spam: no_redactar=true (rebote -> enriquecer=true). solicita_propuesta: NO cotices, ofrece llamada de alcance 20 min.</reglas>\\n<prohibido>NO % sin universo. NO miedo regulatorio ni cumplimiento garantizado. NO nombrar entidades afectadas. NO precio prematuro. NO inventar correos, horarios ni IDs.</prohibido>\\n<salida>SOLO este JSON sin backticks : {\\\"intencion\\\":\\\"\\\",\\\"no_redactar\\\":false,\\\"decisor_revelado\\\":false,\\\"decisor\\\":{\\\"nombre\\\":\\\"\\\",\\\"correo\\\":\\\"\\\",\\\"cargo\\\":\\\"\\\"},\\\"persona_equivocada\\\":false,\\\"quien_refirio\\\":\\\"\\\",\\\"nuevo_score\\\":0,\\\"nuevo_estado\\\":\\\"respondio|agendado|lead_handoff|nurturing|descartado\\\",\\\"nueva_etapa\\\":\\\"Primer contacto|Handoff comercial\\\",\\\"decision_agenda\\\":false,\\\"ventana\\\":\\\"\\\",\\\"crear_evento\\\":false,\\\"propuesta_reunion\\\":{\\\"titulo\\\":\\\"\\\",\\\"duracion_min\\\":20,\\\"estructura\\\":[\\\"\\\",\\\"\\\",\\\"\\\"],\\\"opciones_iso\\\":[]},\\\"usar_booking_link\\\":false,\\\"enriquecer\\\":false,\\\"canal_sugerido\\\":\\\"correo\\\",\\\"asunto_respuesta\\\":\\\"\\\",\\\"cuerpo_html\\\":\\\"\\\",\\\"correo_agradecimiento\\\":\\\"\\\",\\\"fecha_siguiente_paso\\\":\\\"YYYY-MM-DD\\\",\\\"razon\\\":\\\"\\\"}</salida>\", user } });\n}\nreturn out;\n"
       },
       "id": "prep",
       "name": "Prep clasificación",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        960,
-        220
+        1180,
+        240
       ]
     },
     {
@@ -122,7 +169,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1400, system: $json.system, messages: [ { role: 'user', content: $json.user } ] }) }}",
+        "jsonBody": "={{ JSON.stringify({ model:'claude-sonnet-5', max_tokens:1600, system: $json.system, messages:[{role:'user',content:$json.user}] }) }}",
         "options": {}
       },
       "id": "claude",
@@ -130,21 +177,21 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1180,
-        220
+        1400,
+        240
       ]
     },
     {
       "parameters": {
-        "jsCode": "const L='https://raw.githubusercontent.com/sanrotech369-dot/acces-assets/main/';\nconst resp=$json; let text='';\ntry { const _b = resp.content || (resp.body && resp.body.content) || []; const _t = _b.find(x => x && x.type === 'text'); text = _t ? _t.text : '{}'; } catch(e){ text = '{}'; }\ntext = text.replace(/^```json/i,'').replace(/```$/,'').trim();\nconst d = JSON.parse(text);\nconst l = $('Prep clasificación').item.json;\nconst contacto = (l.Contacto && String(l.Contacto).trim()) ? l.Contacto : 'estimado(a)';\nconst CUERPO = d.cuerpo_html || '';\nconst html =\n'<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;max-width:680px;\">'\n+ '<p style=\"margin:0 0 12px 0;\"><strong>CLASIFICACION: <span style=\"color:#c00;\">CONFIDENCIAL</span></strong></p>'\n+ '<p style=\"margin:0 0 16px 0;\"><img src=\"'+L+'logo.png\" alt=\"ACCES GROUP\" style=\"max-width:220px;height:auto;\"></p>'\n+ '<p style=\"margin:0 0 4px 0;\">Muy buen dia <strong>'+contacto+'</strong>,</p>'\n+ '<p style=\"margin:0 0 16px 0;\">Es un placer y un gusto saludarte.</p>'\n+ CUERPO\n+ '<p style=\"margin:16px 0 4px 0;\">Quedo atento a tus comentarios.</p>'\n+ '<p style=\"margin:0 0 20px 0;\">Saludos y excelente dia.</p>'\n+ '<p style=\"margin:0 0 8px 0;\"><img src=\"'+L+'firma.png\" alt=\"Ricardo Varela Leyva\" style=\"max-width:430px;height:auto;\"></p>'\n+ '<table cellpadding=\"0\" cellspacing=\"0\" style=\"font-size:12px;color:#333;line-height:1.5;\">'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">Mobile:</td><td>+52 33 2964 8174</td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">Oficina:</td><td>800 925 0023 ext. 101</td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">WhatsApp:</td><td><a href=\"https://wa.me/523329618174\" style=\"color:#0a3d62;\">wa.me/523329618174</a></td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">LinkedIn:</td><td><a href=\"https://www.linkedin.com/in/ricardo-varela-3793071b6/\" style=\"color:#0a3d62;\">linkedin.com/in/ricardo-varela</a></td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">Sitio:</td><td><a href=\"https://www.accesgroup.com.mx\" style=\"color:#0a3d62;\">www.accesgroup.com.mx</a></td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">e-mail:</td><td><a href=\"mailto:rvarela@accesgroup.com.mx\" style=\"color:#0a3d62;\">rvarela@accesgroup.com.mx</a></td></tr>'\n+ '<tr><td style=\"padding-right:10px;color:#888;\">Direccion:</td><td>Blvd. Puerta de Hierro #5200, Zapopan, Jalisco</td></tr>'\n+ '</table>'\n+ '<p style=\"margin:20px 0 0 0;\"><img src=\"'+L+'clientes.png\" alt=\"Algunos de nuestros clientes\" style=\"max-width:100%;height:auto;\"></p>'\n+ '<p style=\"margin:16px 0 0 0;font-size:10px;color:#999;line-height:1.4;\">Esta comunicacion contiene informacion confidencial y puede contener informacion privilegiada, para uso exclusivo del destinatario. Si usted no es el destinatario, queda prohibida cualquier distribucion, copia o uso de esta comunicacion. Si la recibio por error, notifiquelo y eliminela. Aviso de privacidad: <a href=\"https://www.accesgroup.com.mx/aviso-privacidad/\" style=\"color:#0a3d62;\">accesgroup.com.mx/aviso-privacidad</a></p>'\n+ '</div>';\nd.cuerpo_final = html;\nconst pr = d.propuesta_reunion || {};\nconst opt = (pr.opciones && pr.opciones[0]) ? pr.opciones[0] : null;\nconst dur = pr.duracion_min || 20;\nd.reunion_titulo = pr.titulo || ('ACCES GROUP <> ' + (l.Empresa||''));\nif (opt) { d.reunion_inicio = opt; d.reunion_fin = new Date(new Date(opt).getTime()+dur*60000).toISOString().slice(0,19); }\nif (d.decisor_revelado) d.Decisor_Mapeado = 'si';\nreturn [{ json: { ...l, ...d } }];"
+        "jsCode": "\n// ---- Parsear v2: parse JSON, arma cuerpo con firma, agenda/re-derivacion ----\nconst L='https://raw.githubusercontent.com/sanrotech369-dot/acces-assets/main/';\nlet text=''; try { const _b=$json.content||($json.body&&$json.body.content)||[]; const _t=_b.find(x=>x&&x.type==='text'); text=_t?_t.text:'{}'; } catch(e){ text='{}'; }\ntext=text.replace(/^```json/i,'').replace(/```$/,'').trim();\nlet d; try{ d=JSON.parse(text);}catch(e){ d={intencion:'otro',no_redactar:true,razon:'parse_error'}; }\nconst l=$('Prep clasificación').item.json;\nconst dest = d.persona_equivocada ? ((d.decisor&&d.decisor.correo)||l.Correo) : l.Correo;\nconst nombre = d.persona_equivocada ? ((d.decisor&&d.decisor.nombre)||'estimado(a)') : ((l.Contacto&&String(l.Contacto).trim())?l.Contacto:'estimado(a)');\nconst CUERPO = d.cuerpo_html||'';\nconst html='<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;max-width:680px;\">'\n+'<p style=\"margin:0 0 12px 0;\"><strong>CLASIFICACI&Oacute;N:</strong> <strong style=\"color:#c00;\">CONFIDENCIAL</strong></p>'\n+'<p style=\"margin:0 0 16px 0;\"><img src=\"'+L+'logo.png\" alt=\"ACCES GROUP\" style=\"max-width:220px;height:auto;\"></p>'\n+'<p style=\"margin:0 0 4px 0;\">Muy buen d&iacute;a <strong>'+nombre+'</strong>,</p>'\n+'<p style=\"margin:0 0 16px 0;\">Es un placer y un gusto saludarte.</p>'+CUERPO\n+'<p style=\"margin:16px 0 4px 0;\">Quedo atento a tus comentarios.</p>'\n+'<p style=\"margin:0 0 20px 0;\">Saludos y excelente d&iacute;a.</p>'\n+'<p style=\"margin:0 0 8px 0;\"><img src=\"'+L+'firma.png\" alt=\"Ricardo Varela Leyva\" style=\"max-width:430px;height:auto;\"></p>'\n+'<p style=\"margin:16px 0 0 0;font-size:10px;color:#999;\">Aviso de privacidad: <a href=\"https://www.accesgroup.com.mx/aviso-privacidad/\" style=\"color:#0a3d62;\">accesgroup.com.mx/aviso-privacidad</a></p></div>';\nd.cuerpo_final=html; d.destinatario=dest;\nconst pr=d.propuesta_reunion||{}; const opt=(pr.opciones_iso&&pr.opciones_iso[0])?pr.opciones_iso[0]:null; const dur=pr.duracion_min||20;\nd.reunion_titulo=pr.titulo||('ACCES GROUP <> '+(l.Empresa||'')+' — 20 min');\nd.reunion_estructura=(pr.estructura||[]).filter(Boolean).map((s,i)=>(i+1)+'. '+s).join('<br>');\nd.crear_evento = (d.crear_evento===true) || (d.intencion==='da_horario_especifico');\nif(d.crear_evento && opt){ d.reunion_inicio=opt; d.reunion_fin=new Date(new Date(opt).getTime()+dur*60000).toISOString(); } else { d.crear_evento=false; }\nif(d.decisor_revelado) d.Decisor_Mapeado='si';\nreturn [{ json: { ...l, ...d } }];\n"
       },
       "id": "parse",
       "name": "Parsear",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1400,
-        220
+        1620,
+        240
       ]
     },
     {
@@ -158,7 +205,7 @@
           "combinator": "and",
           "conditions": [
             {
-              "leftValue": "={{ $json.decision_agenda }}",
+              "leftValue": "={{ $json.crear_evento }}",
               "rightValue": "={{ true }}",
               "operator": {
                 "type": "boolean",
@@ -170,67 +217,66 @@
         }
       },
       "id": "ifAgenda",
-      "name": "¿Agendar?",
+      "name": "¿Crear evento?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1620,
-        220
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "create",
-        "calendar": {
-          "__rl": true,
-          "value": "primary",
-          "mode": "id"
-        },
-        "start": "={{ $json.reunion_inicio }}",
-        "end": "={{ $json.reunion_fin }}",
-        "additionalFields": {
-          "summary": "={{ $json.reunion_titulo }}",
-          "attendeesUi": {
-            "values": [
-              {
-                "email": "={{ $json.Correo }}"
-              }
-            ]
-          }
-        }
-      },
-      "id": "gcal",
-      "name": "Calendar: crear evento",
-      "type": "n8n-nodes-base.googleCalendar",
-      "typeVersion": 1.3,
-      "position": [
         1840,
-        120
+        240
       ]
     },
     {
       "parameters": {
-        "jsCode": "const d = $('Parsear').item.json; d.Event_Id = $json.id || ''; return [{ json: d }];"
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ subject: $json.reunion_titulo, body:{ contentType:'HTML', content:'<b>Agenda (20 min):</b><br>'+($json.reunion_estructura||'') }, start:{ dateTime: $json.reunion_inicio, timeZone:'America/Mexico_City' }, end:{ dateTime: $json.reunion_fin, timeZone:'America/Mexico_City' }, attendees:[{ emailAddress:{ address: $json.Correo, name: $json.Contacto }, type:'required' }], isOnlineMeeting:true, onlineMeetingProvider:'teamsForBusiness' }) }}",
+        "options": {}
+      },
+      "id": "mevent",
+      "name": "Graph: crear evento (Teams)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2060,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d=$('Parsear').item.json; d.Event_Id=$json.id||''; d.teams_link=($json.onlineMeeting&&$json.onlineMeeting.joinUrl)||''; return [{json:d}];"
       },
       "id": "capId",
       "name": "Capturar Event_Id",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2060,
-        120
+        2280,
+        140
       ]
     },
     {
       "parameters": {
-        "jsCode": "const d=$json; if(!d.Event_Id) d.Event_Id=''; return [{ json: d }];"
+        "jsCode": "const d=$json; if(!d.Event_Id)d.Event_Id=''; return [{json:d}];"
       },
       "id": "noId",
       "name": "Sin evento",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1840,
+        2060,
         340
       ]
     },
@@ -242,16 +288,113 @@
         "bodyContent": "={{ $json.cuerpo_final }}",
         "additionalFields": {
           "bodyContentType": "html",
-          "toRecipients": "={{ $json.Correo }}"
+          "toRecipients": "={{ $json.destinatario }}"
         }
       },
       "id": "draft",
-      "name": "Outlook: borrador respuesta",
+      "name": "Outlook: borrador principal",
       "type": "n8n-nodes-base.microsoftOutlook",
       "typeVersion": 2,
       "position": [
-        2280,
-        220
+        2500,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.persona_equivocada }}",
+              "rightValue": "={{ true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      },
+      "id": "ifRef",
+      "name": "¿Persona equivocada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2720,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REEMPLAZA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID_Lead": "={{ 'L-REF-' + ($json.conversationId||$json.msg_id||'').toString().slice(-8) }}",
+            "Empresa": "={{ $json.Empresa }}",
+            "Micro_ICP": "={{ $json.Micro_ICP }}",
+            "Sector": "={{ $json.Sector }}",
+            "Pais": "={{ $json.Pais }}",
+            "Contacto": "={{ $json.decisor.nombre }}",
+            "Cargo": "={{ $json.decisor.cargo }}",
+            "Correo": "={{ $json.decisor.correo }}",
+            "Decisor_Mapeado": "si",
+            "Estado": "no_contactado",
+            "Etapa": "Primer contacto",
+            "Trigger_Regulatorio": "={{ $json.Trigger_Regulatorio }}",
+            "Gancho": "={{ $json.Gancho }}",
+            "Num_Toques": 0,
+            "Canal": "correo",
+            "Fuente": "={{ 'Referido por ' + ($json.quien_refirio||$json.Contacto) + ' (' + $json.Empresa + ')' }}",
+            "Notas": "referido desde lead ={{ $json.ID_Lead }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "newlead",
+      "name": "Crear lead referido",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2940,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "operation": "create",
+        "subject": "={{ 'Gracias por el contacto — ' + $json.Empresa }}",
+        "bodyContent": "={{ $json.correo_agradecimiento || 'Gracias por dirigirme con la persona correcta, le escribo con gusto. Saludos.' }}",
+        "additionalFields": {
+          "bodyContentType": "text",
+          "toRecipients": "={{ $json.Correo }}"
+        }
+      },
+      "id": "thanks",
+      "name": "Outlook: agradecer referidor",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        3160,
+        140
       ]
     },
     {
@@ -280,10 +423,10 @@
             "Decisor_Mapeado": "={{ $json.Decisor_Mapeado }}",
             "Event_Id": "={{ $json.Event_Id }}",
             "Thread_Id": "={{ $json.conversationId }}",
-            "Ultimo_Contacto": "={{ $json.hoy }}",
+            "Ultimo_Contacto": "={{ $now.toFormat('yyyy-LL-dd') }}",
             "Fecha_Siguiente_Paso": "={{ $json.fecha_siguiente_paso }}",
-            "Canal": "correo",
-            "Notas": "={{ $json.intencion + ' | ' + $json.razon }}"
+            "Canal": "={{ $json.canal_sugerido || 'correo' }}",
+            "Notas": "={{ $json.intencion + ' | ' + $json.razon + ($json.teams_link? ' | Teams: '+$json.teams_link:'') }}"
           }
         },
         "options": {}
@@ -293,8 +436,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        2500,
-        220
+        3380,
+        240
       ]
     },
     {
@@ -311,8 +454,8 @@
       "type": "n8n-nodes-base.microsoftOutlook",
       "typeVersion": 2,
       "position": [
-        2720,
-        220
+        3600,
+        240
       ]
     }
   ],
@@ -340,6 +483,17 @@
       ]
     },
     "Buscar lead": {
+      "main": [
+        [
+          {
+            "node": "Graph: disponibilidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Graph: disponibilidad": {
       "main": [
         [
           {
@@ -376,18 +530,18 @@
       "main": [
         [
           {
-            "node": "¿Agendar?",
+            "node": "¿Crear evento?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "¿Agendar?": {
+    "¿Crear evento?": {
       "main": [
         [
           {
-            "node": "Calendar: crear evento",
+            "node": "Graph: crear evento (Teams)",
             "type": "main",
             "index": 0
           }
@@ -401,7 +555,7 @@
         ]
       ]
     },
-    "Calendar: crear evento": {
+    "Graph: crear evento (Teams)": {
       "main": [
         [
           {
@@ -416,7 +570,7 @@
       "main": [
         [
           {
-            "node": "Outlook: borrador respuesta",
+            "node": "Outlook: borrador principal",
             "type": "main",
             "index": 0
           }
@@ -427,14 +581,54 @@
       "main": [
         [
           {
-            "node": "Outlook: borrador respuesta",
+            "node": "Outlook: borrador principal",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Outlook: borrador respuesta": {
+    "Outlook: borrador principal": {
+      "main": [
+        [
+          {
+            "node": "¿Persona equivocada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Persona equivocada?": {
+      "main": [
+        [
+          {
+            "node": "Crear lead referido",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Actualizar lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear lead referido": {
+      "main": [
+        [
+          {
+            "node": "Outlook: agradecer referidor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outlook: agradecer referidor": {
       "main": [
         [
           {
