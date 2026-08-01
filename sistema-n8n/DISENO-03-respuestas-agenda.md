@@ -6,18 +6,19 @@
 > Fiel a `contexto-icp.md`: candado de decisor, frontera de handoff, cadencia 3×3×30,
 > regla 70/30, sin inventar correos, sin precio prematuro.
 
-## 0. Realidad MS365 — TODO Microsoft, un solo acceso (regla dura)
-El cliente usa **Microsoft 365** con su correo institucional Outlook. **REGLA DURA: nada de
-Google Calendar. NADA de Google.** Todo el backend corre con **una sola credencial OAuth2
-(la de Microsoft)**:
-- **Correo** = Microsoft Outlook (Graph `sendMail`/drafts).
+## 0. Stack definido (opción B) — correo/calendario Microsoft, registro Google Sheets
+Decisión del cliente: **el calendario y las reuniones DEBEN ser Microsoft 365 / Teams
+(REGLA DURA: nunca Google Calendar)**, y el **registro/CRM se queda en Google Sheets**
+(web-nativo, fácil de ver y automatizar). Dos credenciales en n8n:
+- **Correo** = Microsoft Outlook (Graph, drafts/sendMail) — credencial Microsoft.
 - **Calendario / disponibilidad** = Microsoft Graph (`/me/calendar/getSchedule`,
-  `/me/calendarView`). Creación de cita = `/me/events`.
-- **Reunión con Teams automático** = crear el evento con `isOnlineMeeting: true` +
+  `/me/calendarView`); creación de cita = `/me/events` — **misma credencial Microsoft**.
+- **Reunión con Teams automático** = evento con `isOnlineMeeting: true` +
   `onlineMeetingProvider: teamsForBusiness` → el enlace de Teams se genera solo y va en la cita.
-- **Registro / CRM** = **Microsoft Excel en OneDrive/SharePoint** (Graph workbook), NO Google
-  Sheets. Misma credencial. (Los flujos 01–05 se migran de nodos Google Sheets → Microsoft Excel.)
+- **Registro / CRM / dashboard** = **Google Sheets** (`ICP_CRM_ACCES`) — credencial Google.
 - Link de auto-agenda = `BOOKING_URL` en `Config` (**Microsoft Bookings** de preferencia, o Calendly).
+> Único cambio vs el repo original: el nodo de agenda pasa de **Google Calendar → Microsoft
+> Graph/Outlook Calendar**. Los nodos de Google **Sheets** (registro) se mantienen.
 
 ---
 
