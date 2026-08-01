@@ -1,0 +1,32 @@
+{
+  "bases": 110,
+  "empresas": 26285,
+  "ya_seed": 22,
+  "enriquecer": 17617,
+  "abordar": 120,
+  "por_micro": {
+    "ICP-1": 9279,
+    "ICP-2": 161,
+    "ICP-3": 8518,
+    "OBSERVACION": 1416,
+    "NUEVO": 6911
+  },
+  "por_estado": {
+    "pendiente": 16916,
+    "descartado": 102,
+    "no_contactado": 120,
+    "nurturing": 9147
+  },
+  "por_sector": {
+    "Gasolineras / Energía retail": 9279,
+    "Financiero regulado": 161,
+    "Manufactura / Alimentos / Confitería": 8518,
+    "Turismo / Hotelería": 410,
+    "Automotriz / Movilidad": 640,
+    "Logística / Transporte": 366,
+    "Construcción [por robustecer]": 5524,
+    "Energía / Hidrocarburos [por robustecer]": 1047,
+    "Minería [por robustecer]": 340
+  },
+  "csv": "/tmp/claude-0/-home-user-opendataloader-pdf/49cbf8ae-2e2e-5727-819e-0405ee376fff/scratchpad/MASTER_LEADS.csv"
+}
