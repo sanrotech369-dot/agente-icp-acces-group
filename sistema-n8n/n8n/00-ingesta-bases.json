@@ -1,0 +1,133 @@
+{
+  "name": "ICP · 00 Ingesta de bases → Sheet (arranque)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 00 · Ingesta al CRM\nManual: baja MASTER_LEADS.csv (salida del motor) y agrega al Sheet solo las cuentas de ARRANQUE (Estado=no_contactado). Para carga masiva de las 26k, importa el CSV directo a Google Sheets (Archivo→Importar). Reemplaza REEMPLAZA_SHEET_ID y la URL raw si cambia la rama.",
+        "height": 220,
+        "width": 460
+      },
+      "id": "n0",
+      "name": "Guía",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -40
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "trig",
+      "name": "Ejecutar manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        320,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://raw.githubusercontent.com/sanrotech369-dot/agente-icp-acces-group/claude/autonomous-sales-agent-icp-g3h1kx/salidas/MASTER_LEADS.csv",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "http",
+      "name": "Bajar MASTER_LEADS.csv",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        540,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Parse CSV (con comillas) del MASTER_LEADS y carga solo el ARRANQUE (no_contactado).\nfunction parseCSV(t){const rows=[];let row=[],cur='',q=false;\n for(let i=0;i<t.length;i++){const c=t[i];\n  if(q){if(c=='\"'){if(t[i+1]=='\"'){cur+='\"';i++;}else q=false;}else cur+=c;}\n  else{if(c=='\"')q=true;else if(c==','){row.push(cur);cur='';}else if(c=='\\n'){row.push(cur);rows.push(row);row=[];cur='';}else if(c=='\\r'){}else cur+=c;}}\n if(cur.length||row.length){row.push(cur);rows.push(row);}return rows;}\nconst txt = typeof $json==='string' ? $json : ($json.data || $json.body || '');\nconst rows = parseCSV(String(txt));\nconst head = rows.shift()||[];\nconst FILTRO = 'no_contactado'; // arranque; cambia a '' para cargar todo\nconst out=[];\nfor(const r of rows){ if(!r.length||!r[0]) continue; const o={}; head.forEach((h,i)=>o[h.trim()]=r[i]!==undefined?r[i]:'');\n  if(FILTRO && o.Estado!==FILTRO) continue; out.push({json:o}); }\nreturn out;\n"
+      },
+      "id": "parse",
+      "name": "Parsear + filtrar arranque",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REEMPLAZA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "ID_Lead"
+          ]
+        },
+        "options": {}
+      },
+      "id": "append",
+      "name": "Agregar al Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        980,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Ejecutar manual": {
+      "main": [
+        [
+          {
+            "node": "Bajar MASTER_LEADS.csv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bajar MASTER_LEADS.csv": {
+      "main": [
+        [
+          {
+            "node": "Parsear + filtrar arranque",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear + filtrar arranque": {
+      "main": [
+        [
+          {
+            "node": "Agregar al Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
