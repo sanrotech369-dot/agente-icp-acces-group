@@ -80,7 +80,8 @@
             "ID_Lead"
           ]
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet"
       },
       "id": "append",
       "name": "Agregar al Sheet",

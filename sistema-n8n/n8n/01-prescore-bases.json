@@ -47,7 +47,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
       },
       "id": "read",
       "name": "Leer sin_prescore",
@@ -146,7 +148,8 @@
             "Notas": "={{ $json.razon }}"
           }
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet"
       },
       "id": "upd",
       "name": "Actualizar pre-score",

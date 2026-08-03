@@ -77,7 +77,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
       },
       "id": "find",
       "name": "Buscar lead",
@@ -366,7 +368,8 @@
             "Notas": "referido desde lead ={{ $json.ID_Lead }}"
           }
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet"
       },
       "id": "newlead",
       "name": "Crear lead referido",
@@ -429,7 +432,8 @@
             "Notas": "={{ $json.intencion + ' | ' + $json.razon + ($json.teams_link? ' | Teams: '+$json.teams_link:'') }}"
           }
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet"
       },
       "id": "upd",
       "name": "Actualizar lead",

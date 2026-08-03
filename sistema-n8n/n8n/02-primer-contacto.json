@@ -61,7 +61,9 @@
           "value": "Leads",
           "mode": "name"
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
       },
       "id": "readall",
       "name": "Leer todos los leads",
@@ -182,7 +184,8 @@
             "Notas": "={{ $json.tipo + ' | ' + $json.razon }}"
           }
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet"
       },
       "id": "upd",
       "name": "Marcar contactado",

@@ -48,7 +48,9 @@
           "value": "Leads",
           "mode": "name"
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
       },
       "id": "read",
       "name": "Leer Leads",

@@ -56,7 +56,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
       },
       "id": "read",
       "name": "Leads a enriquecer",
@@ -212,7 +214,8 @@
             "Notas": "={{ $json.Notas }}"
           }
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet"
       },
       "id": "upd",
       "name": "Actualizar CRM",

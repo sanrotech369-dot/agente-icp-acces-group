@@ -48,7 +48,9 @@
           "value": "Leads",
           "mode": "name"
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
       },
       "id": "readall",
       "name": "Leer todos los leads",
@@ -167,7 +169,8 @@
             "Notas": "={{ 'seguimiento:' + $json.tipo_toque + ' | ' + $json.razon }}"
           }
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet"
       },
       "id": "upd",
       "name": "Actualizar toque",

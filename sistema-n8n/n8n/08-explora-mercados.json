@@ -47,7 +47,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
       },
       "id": "read",
       "name": "Sectores por robustecer",
@@ -188,7 +190,8 @@
             "Fuentes": "={{ $json.Fuentes }}"
           }
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet"
       },
       "id": "upd",
       "name": "Guardar ficha",
