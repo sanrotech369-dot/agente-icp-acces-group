@@ -114,7 +114,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ q: $json.q1, gl:'mx', hl:'es', num:10 }) }}",
+        "jsonBody": "={{ JSON.stringify({ q: $('Prep investigacion').item.json.q1, gl:'mx', hl:'es', num:10 }) }}",
         "options": {}
       },
       "id": "s1",
@@ -145,7 +145,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ q: $json.q2, gl:'mx', hl:'es', num:10 }) }}",
+        "jsonBody": "={{ JSON.stringify({ q: $('Prep investigacion').item.json.q2, gl:'mx', hl:'es', num:10 }) }}",
         "options": {}
       },
       "id": "s2",
