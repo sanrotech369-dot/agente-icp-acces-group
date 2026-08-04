@@ -93,6 +93,7 @@
       "id": "readdos",
       "name": "Leer dossiers",
       "type": "n8n-nodes-base.googleSheets",
+      "executeOnce": true,
       "typeVersion": 4.5,
       "position": [
         880,
