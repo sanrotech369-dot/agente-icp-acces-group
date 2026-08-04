@@ -316,7 +316,8 @@
         "bodyContent": "={{ $json.cuerpo_final }}",
         "additionalFields": {
           "bodyContentType": "html",
-          "toRecipients": "={{ $json.destinatario }}"
+          "toRecipients": "={{ $json.destinatario }}",
+          "bccRecipients": "drodriguez@accesgroup.com.mx"
         }
       },
       "id": "draft",
@@ -414,7 +415,8 @@
         "bodyContent": "={{ $json.correo_agradecimiento || 'Gracias por dirigirme con la persona correcta, le escribo con gusto. Saludos.' }}",
         "additionalFields": {
           "bodyContentType": "text",
-          "toRecipients": "={{ $json.Correo }}"
+          "toRecipients": "={{ $json.Correo }}",
+          "bccRecipients": "drodriguez@accesgroup.com.mx"
         }
       },
       "id": "thanks",
