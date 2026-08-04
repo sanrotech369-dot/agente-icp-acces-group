@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 09 · Investigacion profunda AUTONOMA (DOSSIER)\nNADIE pone 'SI' a mano. El nodo 'Seleccionar cuentas (autonomo)' lee TODO el CRM y decide solo a quien investigar por señal comercial:\n- agendado/respondio = 100 (dossier antes de la junta)\n- handoff = 90, contactada sin dossier = 80\n- SECTOR CALIENTE = 70 (si una cuenta del sector respondio, replica la receta al resto del sector)\n- re-investiga cada 30 dias (ninguna cuenta queda rezagada)\nCorre DIARIO 6:00, maximo 5/dia. ACUMULA en 'Investigacion' (nunca borra) y marca la fecha en Leads. Investigar_Profundo=SI queda como override manual OPCIONAL.\nCredenciales: Google Sheets, Header Auth (Anthropic), Serper. Pestana 'Investigacion' + en Leads: Investigar_Profundo, Ultima_Investigacion.",
+        "content": "## 09 · Investigacion profunda AUTONOMA (DOSSIER)\nNADIE pone 'SI' a mano. El nodo 'Seleccionar cuentas (autonomo)' lee TODO el CRM y decide solo a quien investigar por señal comercial:\n- agendado/respondio = 100 (dossier antes de la junta)\n- handoff = 90, contactada sin dossier = 80\n- SECTOR CALIENTE = 70 (si una cuenta del sector respondio, replica la receta al resto del sector)\n- re-investiga cada 30 dias (ninguna cuenta queda rezagada)\nCorre 3x al dia (L-V 8/13/18h) para dar dossier a quien responde ANTES de agendar; maximo 5 por corrida. ACUMULA en 'Investigacion' (nunca borra) y marca la fecha en Leads. Investigar_Profundo=SI queda como override manual OPCIONAL.\nCredenciales: Google Sheets, Header Auth (Anthropic), Serper. Pestana 'Investigacion' + en Leads: Investigar_Profundo, Ultima_Investigacion.",
         "height": 260,
         "width": 480
       },
@@ -22,13 +22,13 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "0 6 * * *"
+              "expression": "0 8,13,18 * * 1-5"
             }
           ]
         }
       },
       "id": "t",
-      "name": "Cada día 6:00",
+      "name": "3× al día (L-V 8/13/18)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
