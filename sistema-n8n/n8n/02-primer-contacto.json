@@ -76,7 +76,32 @@
     },
     {
       "parameters": {
-        "jsCode": "// Tope diario 15 + elegir el mejor candidato pendiente con correo válido\nconst TOPE = 15;\nconst hoy = $now.toFormat('yyyy-LL-dd');\nconst rows = $input.all().map(i=>i.json).filter(r=>r && r.ID_Lead);\nconst enviadosHoy = rows.filter(r => String(r.Ultimo_Contacto).slice(0,10)===hoy && r.Estado==='contactado').length;\nif (enviadosHoy >= TOPE) return [];\nconst cand = rows.filter(r => ['pendiente','no_contactado'].includes(String(r.Estado)) && String(r.Correo||'').includes('@'));\nif (!cand.length) return [];\ncand.sort((a,b)=> (Number(b.Pre_Score)||0) - (Number(a.Pre_Score)||0));\nconst l = cand[0];\nconst system = [\n'<identidad>Agente de prospeccion de ACCES GROUP (Ricardo Varela). Consultor cercano, espanol de NEGOCIO (multa, paro, auditoria), sin jerga. Cliente = heroe, ACCES = habilitador. Regla 70/30.</identidad>',\n'<tarea>Redactar el PRIMER correo para un lead priorizado, con el gancho de su sector. Objetivo: llamada de 20 min. Vender el siguiente paso pequeno, no el proyecto.</tarea>',\n'<ganchos>ICP-1: \"El SAT ya no pide papeles, pide evidencia tecnica. Su estacion pasaria hoy la prueba de seguridad anual del Anexo 21?\". ICP-2: \"La CNBV pide evidencia, no politicas. Ya tiene agendados sus 2 pentest del ano con reporte auditable?\" (si viene de Foro Copayment, mencionarlo). ICP-3: \"Sus clientes globales ya auditan a sus proveedores. Puede demostrar sus controles cuando se los pidan?\".</ganchos>',\n'<estructura>Asunto gancho fecha/dolor (6-9 palabras). Cuerpo HTML simple ~110-140 palabras: contexto sectorial -> dolor -> solucion ACCES en 1 frase -> (si financiero) coincidimos en Foro Copayment -> CTA llamada 20 min con 2 opciones -> salida sin presion. SIN firma.</estructura>',\n'<prohibido>NO % sin universo, NO miedo regulatorio, NO cumplimiento garantizado, NO nombrar entidades afectadas, NO sobre-proponer, NO adivinar correos.</prohibido>',\n'<orientacion>Si el contacto es buzon generico o sin cargo de decision, usar correo de ORIENTACION (preguntar con quien dirigir el tema) en vez de vender.</orientacion>',\n'<salida>SOLO este JSON sin ``` : {\"tipo\":\"venta|orientacion\",\"asunto\":\"\",\"cuerpo_html\":\"\",\"cadencia_paso\":3,\"fecha_siguiente_paso\":\"YYYY-MM-DD\",\"razon\":\"\"}</salida>'\n].join('\\n');\nconst user = `Fecha hoy: ${hoy}\\nLead: ${l.Empresa} | Micro-ICP: ${l.Micro_ICP} | Contacto: ${l.Contacto} (${l.Cargo}) | Correo: ${l.Correo}\\nTrigger: ${l.Trigger_Regulatorio} | Gancho base: ${l.Gancho} | Fuente: ${l.Fuente}\\nDecisor mapeado: ${l.Decisor_Mapeado}\\nRedacta el primer contacto. Devuelve solo el JSON.`;\nreturn [{ json: { ...l, system, user, hoy } }];"
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Investigacion",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "readdos",
+      "name": "Leer dossiers",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tope diario 15 + elegir el mejor candidato + MEMORIA ACTIVA (dossier)\nconst TOPE = 15;\nconst hoy = $now.toFormat('yyyy-LL-dd');\nconst rows = $('Leer todos los leads').all().map(i=>i.json).filter(r=>r && r.ID_Lead);\nconst enviadosHoy = rows.filter(r => String(r.Ultimo_Contacto).slice(0,10)===hoy && r.Estado==='contactado').length;\nif (enviadosHoy >= TOPE) return [];\nconst cand = rows.filter(r => ['pendiente','no_contactado'].includes(String(r.Estado)) && String(r.Correo||'').includes('@'));\nif (!cand.length) return [];\ncand.sort((a,b)=> (Number(b.Pre_Score)||0) - (Number(a.Pre_Score)||0));\nconst l = cand[0];\n// MEMORIA ACTIVA: ultimo dossier de este lead en la pestana Investigacion\nlet dossierTxt = '';\ntry {\n  const inv = $('Leer dossiers').all().map(i=>i.json).filter(x => x && String(x.ID_Lead)===String(l.ID_Lead));\n  inv.sort((a,b)=> String(b.Fecha||'').localeCompare(String(a.Fecha||'')));\n  if (inv.length) dossierTxt = String(inv[0].Dossier_MD || inv[0].Resumen || '').slice(0,3500);\n} catch(e){ dossierTxt=''; }\nconst memoria = dossierTxt\n  ? '\\n--- DOSSIER DE INTELIGENCIA (usa 1-2 datos ESPECIFICOS con fuente: cifra, ranking, cargo, hecho. NO inventes nada fuera de esto) ---\\n'+dossierTxt+'\\n--- FIN DOSSIER ---'\n  : '\\n(Sin dossier previo: usa el gancho base del sector.)';\nconst system = [\n'<identidad>Agente de prospeccion de ACCES GROUP (Ricardo Varela). Consultor cercano, espanol de NEGOCIO (multa, paro, auditoria), sin jerga. Cliente = heroe, ACCES = habilitador. Regla 70/30.</identidad>',\n'<tarea>Redactar el PRIMER correo para un lead priorizado, con el gancho de su sector. Objetivo: llamada de 20 min. Vender el siguiente paso pequeno, no el proyecto.</tarea>',\n'<memoria>Si viene un DOSSIER DE INTELIGENCIA, personaliza el correo con 1-2 datos ESPECIFICOS y verificables del dossier (una cifra, un ranking, un hecho, el nombre de un decisor) para demostrar que investigaste. Integra el dato con naturalidad, sin listar. NUNCA inventes datos que no esten en el dossier. Si no hay dossier, usa el gancho base del sector.</memoria>',\n'<ganchos>ICP-1: \\\"El SAT ya no pide papeles, pide evidencia tecnica. Su estacion pasaria hoy la prueba de seguridad anual del Anexo 21?\\\". ICP-2: \\\"La CNBV pide evidencia, no politicas. Ya tiene agendados sus 2 pentest del ano con reporte auditable?\\\" (si viene de Foro Copayment, mencionarlo). ICP-3: \\\"Sus clientes globales ya auditan a sus proveedores. Puede demostrar sus controles cuando se los pidan?\\\".</ganchos>',\n'<estructura>Asunto gancho fecha/dolor (6-9 palabras). Cuerpo HTML simple ~110-140 palabras: contexto sectorial -> dolor -> solucion ACCES en 1 frase -> (si financiero) coincidimos en Foro Copayment -> CTA llamada 20 min con 2 opciones -> salida sin presion. SIN firma.</estructura>',\n'<prohibido>NO % sin universo, NO miedo regulatorio, NO cumplimiento garantizado, NO nombrar entidades afectadas, NO sobre-proponer, NO adivinar correos, NO inventar datos fuera del dossier.</prohibido>',\n'<orientacion>Si el contacto es buzon generico o sin cargo de decision, usar correo de ORIENTACION (preguntar con quien dirigir el tema) en vez de vender.</orientacion>',\n'<salida>SOLO este JSON sin ``` : {\\\"tipo\\\":\\\"venta|orientacion\\\",\\\"asunto\\\":\\\"\\\",\\\"cuerpo_html\\\":\\\"\\\",\\\"cadencia_paso\\\":3,\\\"fecha_siguiente_paso\\\":\\\"YYYY-MM-DD\\\",\\\"razon\\\":\\\"\\\"}</salida>'\n].join('\\n');\nconst user = `Fecha hoy: ${hoy}\\nLead: ${l.Empresa} | Micro-ICP: ${l.Micro_ICP} | Contacto: ${l.Contacto} (${l.Cargo}) | Correo: ${l.Correo}\\nTrigger: ${l.Trigger_Regulatorio} | Gancho base: ${l.Gancho} | Fuente: ${l.Fuente}\\nDecisor mapeado: ${l.Decisor_Mapeado}${memoria}\\nRedacta el primer contacto usando los datos del dossier cuando existan. Devuelve solo el JSON.`;\nreturn [{ json: { ...l, system, user, hoy } }];"
       },
       "id": "pick",
       "name": "Elegir lead + tope",
@@ -224,7 +249,7 @@
       "main": [
         [
           {
-            "node": "Elegir lead + tope",
+            "node": "Leer dossiers",
             "type": "main",
             "index": 0
           }
@@ -269,6 +294,17 @@
         [
           {
             "node": "Marcar contactado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer dossiers": {
+      "main": [
+        [
+          {
+            "node": "Elegir lead + tope",
             "type": "main",
             "index": 0
           }
