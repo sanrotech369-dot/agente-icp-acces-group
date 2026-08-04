@@ -167,7 +167,8 @@
         "bodyContent": "={{ $json.cuerpo_final }}",
         "additionalFields": {
           "bodyContentType": "html",
-          "toRecipients": "={{ $json.Correo }}"
+          "toRecipients": "={{ $json.Correo }}",
+          "bccRecipients": "drodriguez@accesgroup.com.mx"
         }
       },
       "id": "draft",
