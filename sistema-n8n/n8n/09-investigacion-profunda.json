@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 09 · Investigacion profunda de cuentas (DOSSIER)\nEstilo /analizar-empresas. Toma cuentas con Investigar_Profundo=SI, hace 2 busquedas web, Claude arma un DOSSIER completo (identidad, riesgos, infraestructura, cumplimiento, business case ACCES, decisores, abogado del diablo). ACUMULA cada version en la pestana 'Investigacion' (nunca borra) y marca la fecha en Leads.\nCredenciales: Google Sheets, Header Auth (Anthropic), Serper. Crea la pestana 'Investigacion' y en Leads 2 columnas: Investigar_Profundo, Ultima_Investigacion.",
+        "content": "## 09 · Investigacion profunda AUTONOMA (DOSSIER)\nNADIE pone 'SI' a mano. El nodo 'Seleccionar cuentas (autonomo)' lee TODO el CRM y decide solo a quien investigar por señal comercial:\n- agendado/respondio = 100 (dossier antes de la junta)\n- handoff = 90, contactada sin dossier = 80\n- SECTOR CALIENTE = 70 (si una cuenta del sector respondio, replica la receta al resto del sector)\n- re-investiga cada 30 dias (ninguna cuenta queda rezagada)\nCorre DIARIO 6:00, maximo 5/dia. ACUMULA en 'Investigacion' (nunca borra) y marca la fecha en Leads. Investigar_Profundo=SI queda como override manual OPCIONAL.\nCredenciales: Google Sheets, Header Auth (Anthropic), Serper. Pestana 'Investigacion' + en Leads: Investigar_Profundo, Ultima_Investigacion.",
         "height": 260,
         "width": 480
       },
@@ -22,13 +22,13 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "0 6 * * 1"
+              "expression": "0 6 * * *"
             }
           ]
         }
       },
       "id": "t",
-      "name": "Lunes 6:00",
+      "name": "Cada día 6:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -50,22 +50,27 @@
           "value": "Leads",
           "mode": "name"
         },
-        "filtersUI": {
-          "values": [
-            {
-              "lookupColumn": "Investigar_Profundo",
-              "lookupValue": "SÍ"
-            }
-          ]
-        },
         "options": {}
       },
       "id": "read",
-      "name": "Cuentas a investigar",
+      "name": "Leer todo el CRM",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
         500,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// SELECCION AUTONOMA: nadie pone 'SI' a mano. Decide por señal comercial + replica la receta de exito por sector.\nconst days=(f)=>{const s=String(f||'').slice(0,10);if(!s)return 99999;const t=Date.parse(s);return isNaN(t)?99999:Math.floor((Date.now()-t)/86400000);};\nconst norm=s=>String(s||'').toLowerCase().trim();\nconst leads=$input.all().map(i=>i.json).filter(l=>l&&l.ID_Lead);\n// Sectores CALIENTES: donde ya hubo una respuesta/avance que hizo sentido -> replicar al resto del sector.\nconst HOT=new Set();for(const l of leads){if(['respondio','agendado','lead_handoff','ganado'].includes(norm(l.Estado)))HOT.add(norm(l.Sector));}\nconst vivas=['no_contactado','contactado','respondio','agendado','nurturing','lead_handoff'];\nconst out=[];\nfor(const l of leads){const est=norm(l.Estado);const man=['si','sí'].includes(norm(l.Investigar_Profundo));const ant=days(l.Ultima_Investigacion);\n if(ant<=7&&!man)continue;                 // investigada hace poco -> no gastar creditos\n if(!vivas.includes(est)&&!man)continue;   // solo cuentas vivas (o override manual)\n let p=0,m='';\n if(est==='agendado'||est==='respondio'){p=100;m='reunion/respuesta: dossier previo a la junta';}\n else if(man){p=95;m='override manual';}\n else if(est==='lead_handoff'){p=90;m='handoff al cierre';}\n else if(est==='contactado'&&ant>=99999){p=80;m='contactada sin dossier';}\n else if(HOT.has(norm(l.Sector))&&ant>=99999){p=70;m='sector caliente: receta de exito';}\n else if(ant>=30){p=40;m='re-investigacion (>30 dias)';}\n else if(ant>=99999){p=30;m='nunca investigada';}\n else continue;\n out.push({...l,_prioridad:p,_motivo:m});}\nout.sort((a,b)=>b._prioridad-a._prioridad);\nreturn out.slice(0,8).map(j=>({json:j}));"
+      },
+      "id": "sel",
+      "name": "Seleccionar cuentas (autónomo)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
         220
       ]
     },
@@ -78,8 +83,8 @@
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
       "position": [
-        700,
-        220
+        890,
+        400
       ]
     },
     {
@@ -298,18 +303,29 @@
     }
   ],
   "connections": {
-    "Lunes 6:00": {
+    "Cada día 6:00": {
       "main": [
         [
           {
-            "node": "Cuentas a investigar",
+            "node": "Leer todo el CRM",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Cuentas a investigar": {
+    "Leer todo el CRM": {
+      "main": [
+        [
+          {
+            "node": "Seleccionar cuentas (autónomo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seleccionar cuentas (autónomo)": {
       "main": [
         [
           {
