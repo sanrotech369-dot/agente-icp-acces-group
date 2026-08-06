@@ -489,6 +489,75 @@
         3600,
         240
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---- Detectar rebotes (NDR) del postmaster y extraer el correo que fallo ----\nconst out = [];\nfor (const it of $input.all()) {\n  const m = it.json || {};\n  const fromAddr = String((((m.from||{}).emailAddress)||{}).address || '').toLowerCase();\n  const subj = String(m.subject || '');\n  const bodyC = String(((m.body||{}).content) || m.bodyPreview || '');\n  const probe = (subj + ' ' + bodyC).slice(0, 600);\n  const isNDR =\n       fromAddr.includes('postmaster')\n    || fromAddr.includes('microsoftexchange')\n    || fromAddr.includes('mailer-daemon')\n    || /no se pudo entregar|no se entrega|undeliverable|delivery has failed|delivery failed|no se encontr|address not found|recipient not found|no existe|delivery status notification/i.test(probe);\n  if (!isNDR) continue;\n  // Extraer la primera direccion que fallo (descartando propias/postmaster)\n  const raw = bodyC.match(/[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}/g) || [];\n  const fallido = raw.find(e => {\n    const el = e.toLowerCase();\n    return !el.includes('postmaster')\n        && !el.includes('microsoftexchange')\n        && !el.includes('mailer-daemon')\n        && !el.includes('accesgroup')\n        && !el.includes('outlook.com')\n        && !el.includes('office365')\n        && !el.includes('microsoft.com')\n        && !el.includes('protection.outlook');\n  }) || '';\n  if (!fallido) continue;\n  out.push({ json: { correo_fallido: fallido, msg_id: m.id, asunto: subj } });\n}\nreturn out;\n"
+      },
+      "id": "reb-detect-0001",
+      "name": "Detectar rebotes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Correo"
+          ],
+          "value": {
+            "Correo": "={{ $('Detectar rebotes').item.json.correo_fallido }}",
+            "Estado": "descartado",
+            "Correo_Estado": "rebote",
+            "Enriquecer": "SÍ",
+            "Notas": "rebote NDR (correo invalido) | marcado para enriquecimiento"
+          }
+        },
+        "options": {},
+        "resource": "sheet"
+      },
+      "id": "reb-marcar-0002",
+      "name": "Marcar rebote",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        960,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "update",
+        "messageId": "={{ $('Detectar rebotes').item.json.msg_id }}",
+        "updateFields": {
+          "isRead": true
+        }
+      },
+      "id": "reb-leido-0003",
+      "name": "Outlook: leído rebote",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        60
+      ]
     }
   ],
   "connections": {
@@ -508,6 +577,11 @@
         [
           {
             "node": "Buscar lead",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Detectar rebotes",
             "type": "main",
             "index": 0
           }
@@ -687,6 +761,28 @@
         [
           {
             "node": "Prep clasificación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar rebotes": {
+      "main": [
+        [
+          {
+            "node": "Marcar rebote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar rebote": {
+      "main": [
+        [
+          {
+            "node": "Outlook: leído rebote",
             "type": "main",
             "index": 0
           }
