@@ -199,16 +199,16 @@
             "ID_Lead"
           ],
           "value": {
-            "ID_Lead": "={{ $json.ID_Lead }}",
+            "ID_Lead": "={{ $('Parsear + firma').item.json.ID_Lead }}",
             "Estado": "contactado",
             "Etapa": "Primer contacto",
-            "Cadencia_Paso": "={{ $json.cadencia_paso }}",
-            "Ultimo_Contacto": "={{ $json.hoy }}",
-            "Fecha_Siguiente_Paso": "={{ $json.fecha_siguiente_paso }}",
-            "Num_Toques": "={{ (Number($json.Num_Toques)||0) + 1 }}",
-            "Asunto": "={{ $json.asunto }}",
+            "Cadencia_Paso": "={{ $('Parsear + firma').item.json.cadencia_paso }}",
+            "Ultimo_Contacto": "={{ $('Parsear + firma').item.json.hoy }}",
+            "Fecha_Siguiente_Paso": "={{ $('Parsear + firma').item.json.fecha_siguiente_paso }}",
+            "Num_Toques": "={{ (Number($('Parsear + firma').item.json.Num_Toques)||0) + 1 }}",
+            "Asunto": "={{ $('Parsear + firma').item.json.asunto }}",
             "Canal": "correo",
-            "Notas": "={{ $json.tipo + ' | ' + $json.razon }}"
+            "Notas": "={{ $('Parsear + firma').item.json.tipo + ' | ' + $('Parsear + firma').item.json.razon }}"
           }
         },
         "options": {},

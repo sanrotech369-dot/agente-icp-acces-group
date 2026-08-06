@@ -447,17 +447,17 @@
             "ID_Lead"
           ],
           "value": {
-            "ID_Lead": "={{ $json.ID_Lead }}",
-            "Estado": "={{ $json.nuevo_estado }}",
-            "Etapa": "={{ $json.nueva_etapa }}",
-            "Score_ICP": "={{ $json.nuevo_score }}",
-            "Decisor_Mapeado": "={{ $json.Decisor_Mapeado }}",
-            "Event_Id": "={{ $json.Event_Id }}",
-            "Thread_Id": "={{ $json.conversationId }}",
+            "ID_Lead": "={{ $('Parsear').item.json.ID_Lead }}",
+            "Estado": "={{ $('Parsear').item.json.nuevo_estado }}",
+            "Etapa": "={{ $('Parsear').item.json.nueva_etapa }}",
+            "Score_ICP": "={{ $('Parsear').item.json.nuevo_score }}",
+            "Decisor_Mapeado": "={{ $('Parsear').item.json.Decisor_Mapeado }}",
+            "Event_Id": "={{ $('Parsear').item.json.Event_Id || '' }}",
+            "Thread_Id": "={{ $('Parsear').item.json.conversationId || '' }}",
             "Ultimo_Contacto": "={{ $now.toFormat('yyyy-LL-dd') }}",
-            "Fecha_Siguiente_Paso": "={{ $json.fecha_siguiente_paso }}",
-            "Canal": "={{ $json.canal_sugerido || 'correo' }}",
-            "Notas": "={{ $json.intencion + ' | ' + $json.razon + ($json.teams_link? ' | Teams: '+$json.teams_link:'') }}"
+            "Fecha_Siguiente_Paso": "={{ $('Parsear').item.json.fecha_siguiente_paso }}",
+            "Canal": "={{ $('Parsear').item.json.canal_sugerido || 'correo' }}",
+            "Notas": "={{ $('Parsear').item.json.intencion + ' | ' + $('Parsear').item.json.razon + ($('Parsear').item.json.teams_link? ' | Teams: '+$('Parsear').item.json.teams_link:'') }}"
           }
         },
         "options": {},

@@ -159,14 +159,14 @@
             "ID_Lead"
           ],
           "value": {
-            "ID_Lead": "={{ $json.ID_Lead }}",
-            "Estado": "={{ $json.nuevo_estado }}",
-            "Cadencia_Paso": "={{ (Number($json.Cadencia_Paso)||3) + 1 }}",
-            "Num_Toques": "={{ (Number($json.Num_Toques)||0) + 1 }}",
-            "Ultimo_Contacto": "={{ $json.hoy }}",
-            "Fecha_Siguiente_Paso": "={{ $json.fecha_siguiente_paso }}",
-            "Asunto": "={{ $json.asunto }}",
-            "Notas": "={{ 'seguimiento:' + $json.tipo_toque + ' | ' + $json.razon }}"
+            "ID_Lead": "={{ $('Parsear + firma').item.json.ID_Lead }}",
+            "Estado": "={{ $('Parsear + firma').item.json.nuevo_estado }}",
+            "Cadencia_Paso": "={{ (Number($('Parsear + firma').item.json.Cadencia_Paso)||3) + 1 }}",
+            "Num_Toques": "={{ (Number($('Parsear + firma').item.json.Num_Toques)||0) + 1 }}",
+            "Ultimo_Contacto": "={{ $('Parsear + firma').item.json.hoy }}",
+            "Fecha_Siguiente_Paso": "={{ $('Parsear + firma').item.json.fecha_siguiente_paso }}",
+            "Asunto": "={{ $('Parsear + firma').item.json.asunto }}",
+            "Notas": "={{ 'seguimiento:' + $('Parsear + firma').item.json.tipo_toque + ' | ' + $('Parsear + firma').item.json.razon }}"
           }
         },
         "options": {},
