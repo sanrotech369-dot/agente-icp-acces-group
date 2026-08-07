@@ -22,7 +22,7 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "*/15 12-17 * * 1-6"
+              "expression": "*/15 14-19 * * 1-6"
             }
           ]
         }
@@ -38,7 +38,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Ventana 8:30-10:30\nconst n = $now; const h=n.hour, m=n.minute;\nconst dentro = (h>=12 && h<=17);\nif (!dentro) return [];\nreturn [{ json: { ok: true } }];"
+        "jsCode": "// Ventana 8:30-10:30\nconst n = $now; const h=n.hour, m=n.minute;\nconst dentro = (h>=14 && h<=19);\nif (!dentro) return [];\nreturn [{ json: { ok: true } }];"
       },
       "id": "gate",
       "name": "Ventana 8:30-10:30",
