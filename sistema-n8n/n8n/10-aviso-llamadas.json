@@ -3,9 +3,9 @@
   "nodes": [
     {
       "parameters": {
-        "content": "AVISO DE LLAMADAS (ATENEA)\n\nCada dia L-S 8:30am ATENEA lee las cuentas en Estado=llamar_manual (rebotes sin correo pero con telefono) y te MANDA un correo con la lista para marcar.\n\nCredenciales: Google Sheets ICP + Microsoft Outlook.\nSi no hay cuentas para llamar, no manda correo.",
-        "height": 260,
-        "width": 420
+        "content": "AVISO DE LLAMADAS CON GUION (ATENEA)\n\nCada dia L-S 8:30am ATENEA lee las cuentas en Estado=llamar_manual, y con Claude arma un GUION de llamada por cuenta (con quien hablar, apertura, gancho de valor ACCES, preguntas, objecion y cierre a reunion). Te lo MANDA por correo.\n\nCredenciales: Google Sheets ICP, Header Auth (Anthropic), Microsoft Outlook.\nSi no hay cuentas para llamar, no manda correo.",
+        "height": 300,
+        "width": 440
       },
       "id": "av-sticky-0000",
       "name": "Guía",
@@ -13,7 +13,7 @@
       "typeVersion": 1,
       "position": [
         220,
-        80
+        60
       ]
     },
     {
@@ -33,7 +33,7 @@
       "typeVersion": 1.2,
       "position": [
         300,
-        360
+        400
       ]
     },
     {
@@ -66,40 +66,86 @@
       "typeVersion": 4.5,
       "position": [
         520,
-        360
+        400
       ]
     },
     {
       "parameters": {
-        "jsCode": "// ---- Aviso de llamadas: arma la lista de cuentas en Estado=llamar_manual ----\nconst L='https://raw.githubusercontent.com/sanrotech369-dot/acces-assets/main/';\nconst hoy=$now.toFormat('yyyy-LL-dd');\nconst rows=$input.all().map(i=>i.json).filter(r=>r && r.ID_Lead && String(r.Estado)==='llamar_manual');\nif(!rows.length) return [];   // si no hay nada que llamar, no manda correo\n// ordenar por Pre_Score desc\nrows.sort((a,b)=>(Number(b.Pre_Score)||0)-(Number(a.Pre_Score)||0));\nconst esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\nconst filas=rows.map((r,i)=>{\n  const tel=esc(r.Telefono||'—');\n  const ciu=esc([r.Ciudad,r.Estado_Region].filter(Boolean).join(', ')||'—');\n  const gan=esc(r.Gancho||r.Trigger_Regulatorio||'');\n  return '<tr style=\"border-bottom:1px solid #eee;\">'\n    +'<td style=\"padding:8px 10px;color:#888;\">'+(i+1)+'</td>'\n    +'<td style=\"padding:8px 10px;\"><strong>'+esc(r.Empresa)+'</strong><br><span style=\"color:#888;font-size:12px;\">'+esc(r.Sector||'')+'</span></td>'\n    +'<td style=\"padding:8px 10px;font-size:15px;color:#0a3d62;\"><strong>'+tel+'</strong></td>'\n    +'<td style=\"padding:8px 10px;\">'+ciu+'</td>'\n    +'<td style=\"padding:8px 10px;color:#555;font-size:13px;\">'+gan+'</td>'\n    +'</tr>';\n}).join('');\nconst html='<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;max-width:820px;\">'\n  +'<p style=\"margin:0 0 16px 0;\"><img src=\"'+L+'logo.png\" alt=\"ACCES GROUP\" style=\"max-width:200px;height:auto;\"></p>'\n  +'<h2 style=\"margin:0 0 4px 0;color:#0a3d62;\">&#128222; Cuentas para llamar hoy</h2>'\n  +'<p style=\"margin:0 0 16px 0;color:#666;\">ATENEA detect&oacute; <strong>'+rows.length+'</strong> cuenta(s) sin correo v&aacute;lido pero con tel&eacute;fono. Vale la pena marcarles &mdash; ya est&aacute;n calificadas.</p>'\n  +'<table cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;border-collapse:collapse;border-top:2px solid #0a3d62;\">'\n  +'<tr style=\"background:#f4f6f8;text-align:left;font-size:12px;color:#555;\">'\n  +'<th style=\"padding:8px 10px;\">#</th><th style=\"padding:8px 10px;\">Empresa</th><th style=\"padding:8px 10px;\">Tel&eacute;fono</th><th style=\"padding:8px 10px;\">Ciudad</th><th style=\"padding:8px 10px;\">Gancho para abrir</th></tr>'\n  +filas\n  +'</table>'\n  +'<p style=\"margin:18px 0 0 0;color:#888;font-size:12px;\">Cuando llames a una y cambies su Estado en el CRM, se cae sola de esta lista. &mdash; ATENEA &middot; Agente de prospecci&oacute;n ACCES GROUP</p>'\n  +'</div>';\nreturn [{json:{reporte_html:html, total:rows.length, hoy}}];"
+        "jsCode": "const rows=$input.all().map(i=>i.json).filter(r=>r&&r.ID_Lead&&String(r.Estado)==='llamar_manual');\nif(!rows.length) return [];\nrows.sort((a,b)=>(Number(b.Pre_Score)||0)-(Number(a.Pre_Score)||0));\nconst CAP=10;\nconst sel=rows.slice(0,CAP);\nconst system=\"<identidad>Eres coach de ventas senior de ACCES GROUP (ciberseguridad, GRC, TI). Preparas a Ricardo Varela para LLAMADAS telefonicas a prospectos calificados. Espanol de negocio mexicano, calido, consultivo, cero jerga tecnica, cero presion. Regla 70/30: escuchar mas que hablar.</identidad><portafolio>ACCES GROUP: Consulting (gobierno de TI, riesgo, ISO 27001/22301, BIA/BCP/DRP), Audit (auditoria de sistemas, ciberseguridad, NIST), Solutions (nube hibrida, redes criticas, continuidad, SASE), IT (SOC/NOC/CISO 24x7, pentesting, analisis de vulnerabilidades, Red/Blue Team, phishing), Training. NO hacemos temas fisicos/mecanicos (fugas, hermeticidad, calibracion): TODO se enmarca en seguridad de la informacion y sistemas.</portafolio><encuadre>ICP-1 (gasolineras, Anexo 21 SAT): el angulo es la EVIDENCIA TECNICA de los sistemas de control volumetrico y de informacion (integridad de datos, controles de acceso, analisis de vulnerabilidades en los sistemas), NUNCA deteccion fisica de fugas ni hermeticidad. ICP-2 (financiero regulado): evidencia auditable para CNBV (pentest con reporte). ICP-3 (manufactura/exportador): controles demostrables ante auditorias de clientes globales.</encuadre><objetivo>El UNICO objetivo de la llamada es conseguir una REUNION de 20 minutos. No se vende el proyecto por telefono; se vende el siguiente paso pequeno.</objetivo><tarea>Para CADA cuenta te doy Empresa, Sector, Micro-ICP, Gancho y Ciudad. Genera un mini-guion de llamada REAL, que Ricardo pueda decir tal cual.</tarea><reglas>Frases cortas y naturales. Nada de miedo regulatorio, nada de cumplimiento garantizado, NO inventes datos internos de la empresa. El cierre pide la reunion SIN proponer fecha/hora exacta (ofrece mandar un par de horarios o tu liga).</reglas><salida>Devuelve SOLO un JSON array (sin backticks), un objeto por cuenta EN EL MISMO ORDEN recibido: [{\\\"empresa\\\":\\\"\\\",\\\"con_quien\\\":\\\"a quien pedir cuando contesten (rol probable: dueno, gerente, encargado de sistemas/administracion)\\\",\\\"apertura\\\":\\\"1-2 frases para abrir con permiso y presentarte\\\",\\\"gancho_valor\\\":\\\"el dolor relevante del sector que ACCES resuelve, en lenguaje de negocio (1-2 frases)\\\",\\\"preguntas\\\":[\\\"pregunta 1 de diagnostico para engancharlo\\\",\\\"pregunta 2\\\"],\\\"objecion\\\":\\\"la objecion tipica que van a poner -> como responderla en 1 frase\\\",\\\"cierre\\\":\\\"como pedir la reunion de 20 min sin proponer hora exacta\\\"}]</salida>\";\nconst lista=sel.map((r,i)=>`${i+1}. Empresa: ${r.Empresa} | Sector: ${r.Sector||''} | Micro-ICP: ${r.Micro_ICP||''} | Gancho: ${r.Gancho||r.Trigger_Regulatorio||''} | Ciudad: ${[r.Ciudad,r.Estado_Region].filter(Boolean).join(', ')}`).join('\\n');\nconst user=`Cuentas para llamar hoy (genera un guion por cada una, EN ESTE ORDEN):\\n${lista}\\n\\nDevuelve SOLO el JSON array.`;\nreturn [{json:{system,user,_leads:sel,_total:rows.length,_cap:CAP}}];"
       },
-      "id": "av-code-0003",
-      "name": "Armar aviso",
+      "id": "av-prep-0003",
+      "name": "Prep guiones",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         740,
-        360
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model:'claude-sonnet-5', max_tokens:6000, system:$json.system, messages:[{role:'user',content:$json.user}] }) }}",
+        "options": {}
+      },
+      "id": "av-claude-0004",
+      "name": "Claude: guiones",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const L='https://raw.githubusercontent.com/sanrotech369-dot/acces-assets/main/';\nconst hoy=$now.toFormat('yyyy-LL-dd');\nconst prep=$('Prep guiones').first().json;\nconst leads=(prep&&prep._leads)||[];\nif(!leads.length) return [];\nlet arr=[];\ntry{const b=$json.content||[];const t=b.find(x=>x&&x.type==='text');let txt=(t?t.text:'[]').replace(/^```json/i,'').replace(/```$/,'').trim();arr=JSON.parse(txt);}catch(e){arr=[];}\nconst esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\nconst sec=(icon,titulo,cont)=>'<p style=\"margin:8px 0 2px 0;font-size:12px;color:#0a3d62;font-weight:bold;\">'+icon+' '+titulo+'</p><p style=\"margin:0 0 6px 0;color:#333;\">'+cont+'</p>';\nconst cards=leads.map((r,i)=>{\n  const g=arr[i]||{};\n  const tel=esc(r.Telefono||'-');\n  const ciu=esc([r.Ciudad,r.Estado_Region].filter(Boolean).join(', ')||'-');\n  const preg=Array.isArray(g.preguntas)?g.preguntas.filter(Boolean):[];\n  const pregHtml=preg.length?('<ul style=\"margin:0 0 6px 18px;padding:0;color:#333;\">'+preg.map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul>'):'';\n  const cuerpo = (g.con_quien||g.apertura)\n   ? (sec('&#128100;','Con qui&eacute;n hablar', esc(g.con_quien||'Pregunta por el dueno o encargado de administracion/sistemas.'))\n     + sec('&#127916;','Apertura', esc(g.apertura||''))\n     + sec('&#128161;','Gancho de valor (lo que ACCES resuelve)', esc(g.gancho_valor||r.Gancho||''))\n     + (pregHtml?('<p style=\"margin:8px 0 2px 0;font-size:12px;color:#0a3d62;font-weight:bold;\">&#10067; Preguntas para enganchar</p>'+pregHtml):'')\n     + sec('&#128737;&#65039;','Si te ponen objeci&oacute;n', esc(g.objecion||''))\n     + sec('&#9989;','Cierre a reuni&oacute;n', esc(g.cierre||'Pide una reunion breve de 20 min y ofrece mandar un par de horarios.')))\n   : ('<p style=\"margin:6px 0;color:#a00;\">(Gu&iacute;on no disponible &mdash; usa el gancho base: '+esc(r.Gancho||'')+')</p>');\n  return '<div style=\"border:1px solid #e3e8ee;border-left:4px solid #0a3d62;border-radius:6px;padding:14px 16px;margin:0 0 16px 0;\">'\n    +'<div style=\"display:flex;justify-content:space-between;flex-wrap:wrap;\">'\n    +'<div><span style=\"font-size:16px;font-weight:bold;color:#0a3d62;\">'+(i+1)+'. '+esc(r.Empresa)+'</span><br><span style=\"color:#888;font-size:12px;\">'+esc(r.Sector||'')+' &middot; '+ciu+'</span></div>'\n    +'<div style=\"text-align:right;\"><span style=\"color:#888;font-size:11px;\">TEL&Eacute;FONO</span><br><span style=\"font-size:17px;color:#0a3d62;font-weight:bold;\">'+tel+'</span></div>'\n    +'</div><hr style=\"border:none;border-top:1px solid #eee;margin:10px 0;\">'+cuerpo+'</div>';\n}).join('');\nconst extra=(prep._total>prep._cap)?('<p style=\"color:#888;font-size:12px;\">(+'+(prep._total-prep._cap)+' cuenta(s) mas en cola; apareceran manana.)</p>'):'';\nconst html='<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;max-width:840px;\">'\n  +'<p style=\"margin:0 0 14px 0;\"><img src=\"'+L+'logo.png\" alt=\"ACCES GROUP\" style=\"max-width:200px;height:auto;\"></p>'\n  +'<h2 style=\"margin:0 0 4px 0;color:#0a3d62;\">&#128222; Tus llamadas de hoy &mdash; con gui&oacute;n listo</h2>'\n  +'<p style=\"margin:0 0 16px 0;color:#666;\">ATENEA prepar&oacute; <strong>'+leads.length+'</strong> llamada(s). Cada tarjeta trae con qui&eacute;n hablar, c&oacute;mo abrir, el gancho de valor y c&oacute;mo cerrar la reuni&oacute;n de 20 min. &iexcl;A marcar!</p>'\n  +cards+extra\n  +'<p style=\"margin:18px 0 0 0;color:#888;font-size:12px;\">Cuando agendes o descartes una, cambia su Estado en el CRM y se cae sola de esta lista. &mdash; ATENEA &middot; ACCES GROUP</p>'\n  +'</div>';\nreturn [{json:{reporte_html:html,total:leads.length,hoy}}];"
+      },
+      "id": "av-armar-0005",
+      "name": "Armar aviso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        400
       ]
     },
     {
       "parameters": {
         "resource": "message",
         "operation": "send",
-        "subject": "={{ '📞 ATENEA · Cuentas para llamar hoy (' + $json.total + ')' }}",
+        "subject": "={{ '📞 ATENEA · Llamadas de hoy con guión (' + $json.total + ')' }}",
         "bodyContent": "={{ $json.reporte_html }}",
         "toRecipients": "rvarela@accesgroup.com.mx",
         "additionalFields": {
           "bodyContentType": "html"
         }
       },
-      "id": "av-send-0004",
+      "id": "av-send-0006",
       "name": "Outlook: enviar aviso",
       "type": "n8n-nodes-base.microsoftOutlook",
       "typeVersion": 2,
       "position": [
-        960,
-        360
+        1400,
+        400
       ]
     }
   ],
@@ -116,6 +162,28 @@
       ]
     },
     "Leer llamar_manual": {
+      "main": [
+        [
+          {
+            "node": "Prep guiones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep guiones": {
+      "main": [
+        [
+          {
+            "node": "Claude: guiones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: guiones": {
       "main": [
         [
           {
