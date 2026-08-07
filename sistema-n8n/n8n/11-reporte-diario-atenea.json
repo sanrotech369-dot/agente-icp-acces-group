@@ -1,0 +1,205 @@
+{
+  "name": "ICP · 11 Reporte diario (ATENEA)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "REPORTE DIARIO ATENEA\n\nCada dia L-S 6:45pm: lee el CRM, calcula metricas del dia, Claude CALIFICA el desempeno (1-10) + recomendaciones, y te ENVIA el correo 'REPORTE LEADS ICP [fecha]'.\n\nCredenciales: Google Sheets ICP, Header Auth (Anthropic), Microsoft Outlook.\nSe fija a las 6:45pm para que salga antes de que apagues la PC (7pm).",
+        "height": 280,
+        "width": 440
+      },
+      "id": "rp-sticky-0",
+      "name": "Guía",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        220,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "45 18 * * 1-6"
+            }
+          ]
+        }
+      },
+      "id": "rp-trig-1",
+      "name": "Cada día 6:45 L-S",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        300,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
+      },
+      "id": "rp-read-2",
+      "name": "Leer CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        520,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---- Prep reporte: metricas deterministas del CRM + prompt para calificar ----\nconst hoy=$now.toFormat('yyyy-LL-dd');\nconst hoyDMY=$now.toFormat('dd/LL/yyyy');\nconst rows=$input.all().map(i=>i.json).filter(r=>r&&r.ID_Lead);\nconst by=k=>{const c={};for(const r of rows){const v=(r[k]||'(vacio)');c[v]=(c[v]||0)+1;}return c;};\nconst est=by('Estado');\nconst cont=rows.filter(r=>r.Estado==='contactado');\nconst contactadosHoy=rows.filter(r=>String(r.Ultimo_Contacto).slice(0,10)===hoy).length;\nconst rebotes=rows.filter(r=>String(r.Correo_Estado).toLowerCase()==='rebote').length;\nconst llamar=rows.filter(r=>r.Estado==='llamar_manual').length;\nconst agendados=rows.filter(r=>r.Estado==='agendado').length;\nconst respondio=rows.filter(r=>r.Estado==='respondio').length;\nconst handoff=rows.filter(r=>r.Estado==='lead_handoff').length;\nconst nurturing=rows.filter(r=>r.Estado==='nurturing').length;\nconst nocont=rows.filter(r=>r.Estado==='no_contactado').length;\nconst enriqPend=rows.filter(r=>String(r.Enriquecer)==='SÍ'||String(r.Enriquecer)==='Si'||String(r.Enriquecer)==='SI').length;\nconst m={total:rows.length,contactadosHoy,contactadoTotal:cont.length,rebotes,llamar,agendados,respondio,handoff,nurturing,nocont,enriqPend,porEstado:est};\nconst system=[\n'<rol>Eres ATENEA, supervisora del agente de prospeccion de ACCES GROUP. Evaluas el desempeno del dia de forma HONESTA y ejecutiva, en espanol de negocio. No adornas: si algo no corrio, lo dices.</rol>',\n'<contexto>El agente contacta leads B2B por correo (tope 15/dia), atiende respuestas, agenda reuniones en Teams, da seguimiento, enriquece correos malos y arma listas de llamadas. Meta unica: conseguir reuniones con leads calificados. Corre en n8n en la PC del usuario (solo trabaja si la PC esta prendida al mediodia).</contexto>',\n'<tarea>Con las METRICAS del dia, califica el desempeno del 1 al 10 y da recomendaciones accionables. Si contactadosHoy=0 en dia habil, es SENAL DE ALARMA (probablemente la PC estaba apagada a su hora o un flujo esta caido): dilo claro.</tarea>',\n'<salida>SOLO este JSON sin backticks: {\"calificacion\":0,\"veredicto\":\"2-3 frases honestas del dia\",\"alertas\":[\"si algo se ve mal\"],\"recomendaciones\":[\"accion 1\",\"accion 2\",\"accion 3\"]}</salida>'\n].join('\\n');\nconst user=`METRICAS DE HOY (${hoyDMY}):\\n`+JSON.stringify(m,null,1)+`\\nCalifica el desempeno y devuelve SOLO el JSON.`;\nreturn [{json:{system,user,_m:m,hoy,hoyDMY}}];"
+      },
+      "id": "rp-prep-3",
+      "name": "Prep reporte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model:'claude-sonnet-5', max_tokens:1500, system:$json.system, messages:[{role:'user',content:$json.user}] }) }}",
+        "options": {}
+      },
+      "id": "rp-claude-4",
+      "name": "Claude: calificar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---- Armar correo del reporte ----\nconst prep=$('Prep reporte').first().json;\nconst m=prep._m; const hoyDMY=prep.hoyDMY;\nlet d={};\ntry{const b=$json.content||[];const t=b.find(x=>x&&x.type==='text');d=JSON.parse((t?t.text:'{}').replace(/^```json/i,'').replace(/```$/,'').trim());}catch(e){d={calificacion:'-',veredicto:'(no se pudo generar la calificacion automatica hoy)',alertas:[],recomendaciones:[]};}\nconst esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\nconst filaEstado=Object.entries(m.porEstado).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td>'+v+'</td></tr>').join('');\nconst alertas=(d.alertas||[]).filter(Boolean);\nconst recs=(d.recomendaciones||[]).filter(Boolean);\nconst alertaHoy = (m.contactadosHoy===0) ? '<p><strong>&#9888;&#65039; ALERTA:</strong> hoy se enviaron <strong>0</strong> primeros contactos. Revisa que la PC estuviera prendida y n8n corriendo al mediod&iacute;a, y que el flujo 02 est&eacute; Activo.</p>' : '';\nconst html='<h2>REPORTE LEADS ICP &mdash; '+hoyDMY+'</h2>'\n+'<p><strong>Supervisi&oacute;n aut&oacute;noma ATENEA</strong> &middot; ACCES GROUP</p>'\n+alertaHoy\n+'<h3>Actividad de hoy</h3><ul>'\n+'<li>Primeros contactos enviados hoy: <strong>'+m.contactadosHoy+'</strong> (tope 15)</li>'\n+'<li>Respuestas de prospectos: <strong>'+m.respondio+'</strong> &middot; Handoff a comercial: <strong>'+m.handoff+'</strong></li>'\n+'<li>Reuniones agendadas (total): <strong>'+m.agendados+'</strong></li>'\n+'<li>Rebotes detectados: <strong>'+m.rebotes+'</strong> &middot; En lista de llamadas: <strong>'+m.llamar+'</strong></li>'\n+'<li>Pendientes por enriquecer: <strong>'+m.enriqPend+'</strong></li>'\n+'</ul>'\n+'<h3>Estado del pipeline ('+m.total+' leads)</h3><table><tr><th>Estado</th><th>Leads</th></tr>'+filaEstado+'</table>'\n+'<h3>Calificaci&oacute;n del agente: '+esc(d.calificacion)+' / 10</h3>'\n+'<p>'+esc(d.veredicto)+'</p>'\n+(alertas.length?('<h3>Alertas</h3><ul>'+alertas.map(a=>'<li>'+esc(a)+'</li>').join('')+'</ul>'):'')\n+(recs.length?('<h3>Ajustes recomendados</h3><ul>'+recs.map(r=>'<li>'+esc(r)+'</li>').join('')+'</ul>'):'')\n+'<hr><p><strong>ATENEA</strong> &middot; Supervisi&oacute;n aut&oacute;noma &middot; ACCES GROUP</p>';\nreturn [{json:{reporte_html:html,asunto:'REPORTE LEADS ICP '+hoyDMY}}];"
+      },
+      "id": "rp-armar-5",
+      "name": "Armar correo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "subject": "={{ $json.asunto }}",
+        "bodyContent": "={{ $json.reporte_html }}",
+        "toRecipients": "rvarela@accesgroup.com.mx",
+        "additionalFields": {
+          "bodyContentType": "html"
+        }
+      },
+      "id": "rp-send-6",
+      "name": "Outlook: enviar reporte",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        380
+      ]
+    }
+  ],
+  "connections": {
+    "Cada día 6:45 L-S": {
+      "main": [
+        [
+          {
+            "node": "Leer CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer CRM": {
+      "main": [
+        [
+          {
+            "node": "Prep reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep reporte": {
+      "main": [
+        [
+          {
+            "node": "Claude: calificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: calificar": {
+      "main": [
+        [
+          {
+            "node": "Armar correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar correo": {
+      "main": [
+        [
+          {
+            "node": "Outlook: enviar reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
