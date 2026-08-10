@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Primer contacto\nMartes-jueves 8:30-10:30, hasta 15 borradores/día. Toma el lead pendiente de mayor Pre_Score con correo válido, redacta el 1er contacto con el gancho de su sector (cadencia 3×3×30) y lo deja como BORRADOR en Outlook.\nCredenciales: Google Sheets, Outlook, Header Auth (Anthropic).\nParámetros ajustables: cron (`* 8-10 * * 2-4`), tope 15, ventana 8:30-10:30. Para modo diario 9-10:30/60: cambia cron a `* 9-10 * * 1-5`, gate y tope.",
+        "content": "Primer contacto (LOTE)\n\nLunes-sabado ~12:00pm (hora NY 14:00). Genera hasta 15 borradores de golpe en una corrida: toma los leads de mayor Pre_Score con correo, redacta el 1er contacto con el gancho de su sector y los deja como BORRADOR en Outlook.\nCredenciales: Google Sheets ICP, Outlook, Header Auth (Anthropic).\nTope 15/dia. Un Execute manual tambien suelta los 15.",
         "height": 300,
         "width": 440
       },
@@ -76,33 +76,7 @@
     },
     {
       "parameters": {
-        "resource": "sheet",
-        "operation": "read",
-        "documentId": {
-          "__rl": true,
-          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "Investigacion",
-          "mode": "name"
-        },
-        "options": {}
-      },
-      "id": "readdos",
-      "name": "Leer dossiers",
-      "type": "n8n-nodes-base.googleSheets",
-      "executeOnce": true,
-      "typeVersion": 4.5,
-      "position": [
-        880,
-        400
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Tope diario 15 (LOTE): genera hasta 15 borradores en UNA corrida + MEMORIA ACTIVA\nconst TOPE = 15;\nconst hoy = $now.toFormat('yyyy-LL-dd');\nconst rows = $('Leer todos los leads').all().map(i=>i.json).filter(r=>r && r.ID_Lead);\nconst enviadosHoy = rows.filter(r => String(r.Ultimo_Contacto).slice(0,10)===hoy && r.Estado==='contactado').length;\nconst remaining = TOPE - enviadosHoy;\nif (remaining <= 0) return [];\nconst cand = rows.filter(r => ['pendiente','no_contactado'].includes(String(r.Estado)) && String(r.Correo||'').includes('@'));\nif (!cand.length) return [];\ncand.sort((a,b)=> (Number(b.Pre_Score)||0) - (Number(a.Pre_Score)||0));\nconst sel = cand.slice(0, remaining);\nconst invAll = (()=>{ try { return $('Leer dossiers').all().map(i=>i.json); } catch(e){ return []; } })();\nconst system = [\n'<identidad>Agente de prospeccion de ACCES GROUP (Ricardo Varela). Consultor cercano, espanol de NEGOCIO (multa, paro, auditoria), sin jerga. Cliente = heroe, ACCES = habilitador. Regla 70/30.</identidad>',\n'<portafolio>ACCES GROUP es firma de CIBERSEGURIDAD, GRC y TI. Servicios: Consulting (gobierno de TI, riesgo, ISO 27001/22301, BIA/BCP/DRP), Audit (auditoria de sistemas, ciberseguridad, NIST, regulatoria), Solutions (nube hibrida, redes criticas, continuidad, SASE), IT (SOC/NOC/CISO/BaaS 24x7, pentesting infra/web/APIs/OT, analisis de vulnerabilidades, Red/Blue Team, DevSecOps, phishing), Training. NO hacemos temas fisicos/mecanicos (fugas, hermeticidad, calibracion): todo se enmarca en SEGURIDAD DE LA INFORMACION y sistemas.</portafolio>',\n'<tarea>Redactar el PRIMER correo para un lead priorizado, con el gancho de su sector. Objetivo: llamada de 20 min. Vender el siguiente paso pequeno, no el proyecto.</tarea>',\n'<memoria>Si viene un DOSSIER DE INTELIGENCIA, personaliza el correo con 1-2 datos ESPECIFICOS y verificables del dossier (una cifra, un ranking, un hecho, el nombre de un decisor) para demostrar que investigaste. Integra el dato con naturalidad, sin listar. NUNCA inventes datos que no esten en el dossier. Si no hay dossier, usa el gancho base del sector.</memoria>',\n'<encuadre>SIEMPRE enmarca el dolor y la solucion dentro del portafolio ACCES (ciberseguridad, GRC, auditoria de sistemas, analisis de vulnerabilidades, continuidad). Para ICP-1 (Anexo 21 SAT) el angulo es la EVIDENCIA TECNICA de los SISTEMAS de control volumetrico y de informacion (integridad de datos, controles de acceso, brechas en sistemas de informacion, analisis de vulnerabilidades), NUNCA la deteccion fisica de fugas ni la hermeticidad mecanica. Menciona el analisis de vulnerabilidades / brechas en sistemas cuando aplique.</encuadre>',\n'<ganchos>ICP-1: \\\"El SAT ya no pide papeles, pide evidencia tecnica. Su estacion pasaria hoy la prueba de seguridad anual del Anexo 21?\\\". ICP-2: \\\"La CNBV pide evidencia, no politicas. Ya tiene agendados sus 2 pentest del ano con reporte auditable?\\\" (si viene de Foro Copayment, mencionarlo). ICP-3: \\\"Sus clientes globales ya auditan a sus proveedores. Puede demostrar sus controles cuando se los pidan?\\\".</ganchos>',\n'<estructura>Asunto gancho fecha/dolor (6-9 palabras). Cuerpo HTML simple ~110-140 palabras: contexto sectorial -> dolor -> solucion ACCES en 1 frase -> (si financiero) coincidimos en Foro Copayment -> CTA: NO propongas fecha ni hora exactas; ofrece una llamada de 20 min y di que con gusto compartes un par de horarios o tu liga de agenda para que elija. Salida sin presion. SIN firma.</estructura>',\n'<prohibido>NO % sin universo, NO miedo regulatorio, NO cumplimiento garantizado, NO nombrar entidades afectadas, NO sobre-proponer, NO adivinar correos, NO inventar datos fuera del dossier, NO proponer fecha/hora especifica (eso se agenda en el flujo de respuestas), NO temas fisicos/mecanicos fuera del portafolio ACCES (fugas, hermeticidad, calibracion).</prohibido>',\n'<orientacion>Si el contacto es buzon generico o sin cargo de decision, usar correo de ORIENTACION (preguntar con quien dirigir el tema) en vez de vender.</orientacion>',\n'<salida>SOLO este JSON sin ``` : {\\\"tipo\\\":\\\"venta|orientacion\\\",\\\"asunto\\\":\\\"\\\",\\\"cuerpo_html\\\":\\\"\\\",\\\"cadencia_paso\\\":3,\\\"fecha_siguiente_paso\\\":\\\"YYYY-MM-DD\\\",\\\"razon\\\":\\\"\\\"}</salida>'\n].join('\\n');\nconst out = [];\nfor (const l of sel) {\n  let dossierTxt = '';\n  try {\n    const inv = invAll.filter(x => x && String(x.ID_Lead)===String(l.ID_Lead));\n    inv.sort((a,b)=> String(b.Fecha||'').localeCompare(String(a.Fecha||'')));\n    if (inv.length) dossierTxt = String(inv[0].Dossier_MD || inv[0].Resumen || '').slice(0,3500);\n  } catch(e){ dossierTxt=''; }\n  const memoria = dossierTxt\n    ? '\\n--- DOSSIER DE INTELIGENCIA (usa 1-2 datos ESPECIFICOS con fuente: cifra, ranking, cargo, hecho. NO inventes nada fuera de esto) ---\\n'+dossierTxt+'\\n--- FIN DOSSIER ---'\n    : '\\n(Sin dossier previo: usa el gancho base del sector.)';\n  const user = `Fecha hoy: ${hoy}\\nLead: ${l.Empresa} | Micro-ICP: ${l.Micro_ICP} | Contacto: ${l.Contacto} (${l.Cargo}) | Correo: ${l.Correo}\\nTrigger: ${l.Trigger_Regulatorio} | Gancho base: ${l.Gancho} | Fuente: ${l.Fuente}\\nDecisor mapeado: ${l.Decisor_Mapeado}${memoria}\\nRedacta el primer contacto usando los datos del dossier cuando existan. Devuelve solo el JSON.`;\n  out.push({ json: { ...l, system, user, hoy } });\n}\nreturn out;\n"
+        "jsCode": "// Tope diario 15 (LOTE): genera hasta 15 borradores en UNA corrida + MEMORIA ACTIVA\nconst TOPE = 15;\nconst hoy = $now.toFormat('yyyy-LL-dd');\nconst rows = $('Leer todos los leads').all().map(i=>i.json).filter(r=>r && r.ID_Lead);\nconst enviadosHoy = rows.filter(r => String(r.Ultimo_Contacto).slice(0,10)===hoy && r.Estado==='contactado').length;\nconst remaining = TOPE - enviadosHoy;\nif (remaining <= 0) return [];\nconst cand = rows.filter(r => ['pendiente','no_contactado'].includes(String(r.Estado)) && String(r.Correo||'').includes('@'));\nif (!cand.length) return [];\ncand.sort((a,b)=> (Number(b.Pre_Score)||0) - (Number(a.Pre_Score)||0));\nconst sel = cand.slice(0, remaining);\nconst invAll = []; // dossiers desactivados (pestana opcional)\nconst system = [\n'<identidad>Agente de prospeccion de ACCES GROUP (Ricardo Varela). Consultor cercano, espanol de NEGOCIO (multa, paro, auditoria), sin jerga. Cliente = heroe, ACCES = habilitador. Regla 70/30.</identidad>',\n'<portafolio>ACCES GROUP es firma de CIBERSEGURIDAD, GRC y TI. Servicios: Consulting (gobierno de TI, riesgo, ISO 27001/22301, BIA/BCP/DRP), Audit (auditoria de sistemas, ciberseguridad, NIST, regulatoria), Solutions (nube hibrida, redes criticas, continuidad, SASE), IT (SOC/NOC/CISO/BaaS 24x7, pentesting infra/web/APIs/OT, analisis de vulnerabilidades, Red/Blue Team, DevSecOps, phishing), Training. NO hacemos temas fisicos/mecanicos (fugas, hermeticidad, calibracion): todo se enmarca en SEGURIDAD DE LA INFORMACION y sistemas.</portafolio>',\n'<tarea>Redactar el PRIMER correo para un lead priorizado, con el gancho de su sector. Objetivo: llamada de 20 min. Vender el siguiente paso pequeno, no el proyecto.</tarea>',\n'<memoria>Si viene un DOSSIER DE INTELIGENCIA, personaliza el correo con 1-2 datos ESPECIFICOS y verificables del dossier (una cifra, un ranking, un hecho, el nombre de un decisor) para demostrar que investigaste. Integra el dato con naturalidad, sin listar. NUNCA inventes datos que no esten en el dossier. Si no hay dossier, usa el gancho base del sector.</memoria>',\n'<encuadre>SIEMPRE enmarca el dolor y la solucion dentro del portafolio ACCES (ciberseguridad, GRC, auditoria de sistemas, analisis de vulnerabilidades, continuidad). Para ICP-1 (Anexo 21 SAT) el angulo es la EVIDENCIA TECNICA de los SISTEMAS de control volumetrico y de informacion (integridad de datos, controles de acceso, brechas en sistemas de informacion, analisis de vulnerabilidades), NUNCA la deteccion fisica de fugas ni la hermeticidad mecanica. Menciona el analisis de vulnerabilidades / brechas en sistemas cuando aplique.</encuadre>',\n'<ganchos>ICP-1: \\\"El SAT ya no pide papeles, pide evidencia tecnica. Su estacion pasaria hoy la prueba de seguridad anual del Anexo 21?\\\". ICP-2: \\\"La CNBV pide evidencia, no politicas. Ya tiene agendados sus 2 pentest del ano con reporte auditable?\\\" (si viene de Foro Copayment, mencionarlo). ICP-3: \\\"Sus clientes globales ya auditan a sus proveedores. Puede demostrar sus controles cuando se los pidan?\\\".</ganchos>',\n'<estructura>Asunto gancho fecha/dolor (6-9 palabras). Cuerpo HTML simple ~110-140 palabras: contexto sectorial -> dolor -> solucion ACCES en 1 frase -> (si financiero) coincidimos en Foro Copayment -> CTA: NO propongas fecha ni hora exactas; ofrece una llamada de 20 min y di que con gusto compartes un par de horarios o tu liga de agenda para que elija. Salida sin presion. SIN firma.</estructura>',\n'<prohibido>NO % sin universo, NO miedo regulatorio, NO cumplimiento garantizado, NO nombrar entidades afectadas, NO sobre-proponer, NO adivinar correos, NO inventar datos fuera del dossier, NO proponer fecha/hora especifica (eso se agenda en el flujo de respuestas), NO temas fisicos/mecanicos fuera del portafolio ACCES (fugas, hermeticidad, calibracion).</prohibido>',\n'<orientacion>Si el contacto es buzon generico o sin cargo de decision, usar correo de ORIENTACION (preguntar con quien dirigir el tema) en vez de vender.</orientacion>',\n'<salida>SOLO este JSON sin ``` : {\\\"tipo\\\":\\\"venta|orientacion\\\",\\\"asunto\\\":\\\"\\\",\\\"cuerpo_html\\\":\\\"\\\",\\\"cadencia_paso\\\":3,\\\"fecha_siguiente_paso\\\":\\\"YYYY-MM-DD\\\",\\\"razon\\\":\\\"\\\"}</salida>'\n].join('\\n');\nconst out = [];\nfor (const l of sel) {\n  let dossierTxt = '';\n  try {\n    const inv = invAll.filter(x => x && String(x.ID_Lead)===String(l.ID_Lead));\n    inv.sort((a,b)=> String(b.Fecha||'').localeCompare(String(a.Fecha||'')));\n    if (inv.length) dossierTxt = String(inv[0].Dossier_MD || inv[0].Resumen || '').slice(0,3500);\n  } catch(e){ dossierTxt=''; }\n  const memoria = dossierTxt\n    ? '\\n--- DOSSIER DE INTELIGENCIA (usa 1-2 datos ESPECIFICOS con fuente: cifra, ranking, cargo, hecho. NO inventes nada fuera de esto) ---\\n'+dossierTxt+'\\n--- FIN DOSSIER ---'\n    : '\\n(Sin dossier previo: usa el gancho base del sector.)';\n  const user = `Fecha hoy: ${hoy}\\nLead: ${l.Empresa} | Micro-ICP: ${l.Micro_ICP} | Contacto: ${l.Contacto} (${l.Cargo}) | Correo: ${l.Correo}\\nTrigger: ${l.Trigger_Regulatorio} | Gancho base: ${l.Gancho} | Fuente: ${l.Fuente}\\nDecisor mapeado: ${l.Decisor_Mapeado}${memoria}\\nRedacta el primer contacto usando los datos del dossier cuando existan. Devuelve solo el JSON.`;\n  out.push({ json: { ...l, system, user, hoy } });\n}\nreturn out;\n"
       },
       "id": "pick",
       "name": "Elegir lead + tope",
@@ -251,7 +225,7 @@
       "main": [
         [
           {
-            "node": "Leer dossiers",
+            "node": "Elegir lead + tope",
             "type": "main",
             "index": 0
           }
@@ -296,17 +270,6 @@
         [
           {
             "node": "Marcar contactado",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Leer dossiers": {
-      "main": [
-        [
-          {
-            "node": "Elegir lead + tope",
             "type": "main",
             "index": 0
           }
