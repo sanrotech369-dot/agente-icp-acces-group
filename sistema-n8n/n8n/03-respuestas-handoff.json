@@ -492,7 +492,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ---- Detectar rebotes (NDR) del postmaster y extraer el correo que fallo ----\nconst out = [];\nfor (const it of $input.all()) {\n  const m = it.json || {};\n  const fromAddr = String((((m.from||{}).emailAddress)||{}).address || '').toLowerCase();\n  const subj = String(m.subject || '');\n  const bodyC = String(((m.body||{}).content) || m.bodyPreview || '');\n  const probe = (subj + ' ' + bodyC).slice(0, 600);\n  const isNDR =\n       fromAddr.includes('postmaster')\n    || fromAddr.includes('microsoftexchange')\n    || fromAddr.includes('mailer-daemon')\n    || /no se pudo entregar|no se entrega|undeliverable|delivery has failed|delivery failed|no se encontr|address not found|recipient not found|no existe|delivery status notification/i.test(probe);\n  if (!isNDR) continue;\n  // Extraer la primera direccion que fallo (descartando propias/postmaster)\n  const raw = bodyC.match(/[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}/g) || [];\n  const fallido = raw.find(e => {\n    const el = e.toLowerCase();\n    return !el.includes('postmaster')\n        && !el.includes('microsoftexchange')\n        && !el.includes('mailer-daemon')\n        && !el.includes('accesgroup')\n        && !el.includes('outlook.com')\n        && !el.includes('office365')\n        && !el.includes('microsoft.com')\n        && !el.includes('protection.outlook');\n  }) || '';\n  if (!fallido) continue;\n  out.push({ json: { correo_fallido: fallido, msg_id: m.id, asunto: subj } });\n}\nreturn out;\n"
+        "jsCode": "// ---- Detectar rebotes (NDR) + resolver ID_Lead por coincidencia (soporta celdas con varios correos) ----\nconst leads = (()=>{ try{ return $('Leer leads rebote').all().map(i=>i.json).filter(l=>l&&l.ID_Lead);}catch(e){ return []; } })();\nconst emails = $('Outlook: no leídos').all().map(i=>i.json);\nfunction splitCorreos(s){ return String(s||'').toLowerCase().split(/[;,\\/\\s]+/).map(x=>x.trim()).filter(Boolean); }\nconst out = [];\nfor (const m of emails) {\n  const fromAddr = String((((m.from||{}).emailAddress)||{}).address || '').toLowerCase();\n  const subj = String(m.subject || '');\n  const bodyC = String(((m.body||{}).content) || m.bodyPreview || '');\n  const probe = (subj + ' ' + bodyC).slice(0, 800);\n  const isNDR = fromAddr.includes('postmaster') || fromAddr.includes('microsoftexchange') || fromAddr.includes('mailer-daemon')\n    || /no se pudo entregar|no se puede entregar|no se entrega|undeliverable|delivery has failed|delivery failed|no se encontr|address not found|recipient not found|no existe|delivery status notification/i.test(probe);\n  if (!isNDR) continue;\n  const raw = bodyC.match(/[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}/g) || [];\n  const fallido = raw.find(e => { const el=e.toLowerCase(); return !el.includes('postmaster') && !el.includes('microsoftexchange') && !el.includes('mailer-daemon') && !el.includes('accesgroup') && !el.includes('outlook.com') && !el.includes('office365') && !el.includes('microsoft.com') && !el.includes('protection.outlook'); }) || '';\n  if (!fallido) continue;\n  const fl = fallido.toLowerCase();\n  const lead = leads.find(l => splitCorreos(l.Correo).includes(fl)) || leads.find(l => String(l.Correo||'').toLowerCase().includes(fl));\n  if (!lead) continue;  // rebote de correo que no esta en la base -> se ignora\n  out.push({ json: { ID_Lead: lead.ID_Lead, Empresa: lead.Empresa, correo_fallido: fallido, msg_id: m.id, asunto: subj } });\n}\nreturn out;\n"
       },
       "id": "reb-detect-0001",
       "name": "Detectar rebotes",
@@ -519,14 +519,14 @@
         "columns": {
           "mappingMode": "defineBelow",
           "matchingColumns": [
-            "Correo"
+            "ID_Lead"
           ],
           "value": {
-            "Correo": "={{ $('Detectar rebotes').item.json.correo_fallido }}",
+            "ID_Lead": "={{ $('Detectar rebotes').item.json.ID_Lead }}",
             "Estado": "descartado",
             "Correo_Estado": "rebote",
             "Enriquecer": "SÍ",
-            "Notas": "rebote NDR (correo invalido) | marcado para enriquecimiento"
+            "Notas": "={{ 'rebote NDR (' + $('Detectar rebotes').item.json.correo_fallido + ') | correo invalido' }}"
           }
         },
         "options": {},
@@ -558,6 +558,31 @@
         1180,
         60
       ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
+      },
+      "id": "firb",
+      "name": "Leer leads rebote",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        560,
+        100
+      ]
     }
   ],
   "connections": {
@@ -581,7 +606,7 @@
             "index": 0
           },
           {
-            "node": "Detectar rebotes",
+            "node": "Leer leads rebote",
             "type": "main",
             "index": 0
           }
@@ -783,6 +808,17 @@
         [
           {
             "node": "Outlook: leído rebote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer leads rebote": {
+      "main": [
+        [
+          {
+            "node": "Detectar rebotes",
             "type": "main",
             "index": 0
           }
