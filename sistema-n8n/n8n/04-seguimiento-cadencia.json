@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Seguimiento cadencia 3×3×30\nCada mañana busca leads contactados cuya Fecha_Siguiente_Paso = hoy y con <9 toques, y redacta el siguiente toque de correo CON VALOR (prueba social / breakup). Máx 9 toques/30 días; al llegar → nurturing.\nLos toques de LinkedIn/Video se marcan como tarea manual en Notas.\nCredenciales: Google Sheets, Outlook, Header Auth (Anthropic). Reemplaza REEMPLAZA_SHEET_ID.",
+        "content": "## Seguimiento cadencia 3×3×30\nCada mañana busca leads contactados cuya Fecha_Siguiente_Paso = hoy y con <9 toques, y redacta el siguiente toque de correo CON VALOR (prueba social / breakup). Máx 9 toques/30 días; al llegar → nurturing.\nLos toques de LinkedIn/Video se marcan como tarea manual en Notas.\nCredenciales: Google Sheets, Outlook, Header Auth (Anthropic). Reemplaza 1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M.",
         "height": 280,
         "width": 440
       },
@@ -22,7 +22,7 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "0 8 * * 1-5"
+              "expression": "0 15 * * 1-6"
             }
           ]
         }
@@ -40,7 +40,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {
@@ -48,7 +48,9 @@
           "value": "Leads",
           "mode": "name"
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
       },
       "id": "readall",
       "name": "Leer todos los leads",
@@ -143,7 +145,7 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "REEMPLAZA_SHEET_ID",
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
           "mode": "id"
         },
         "sheetName": {
@@ -157,17 +159,18 @@
             "ID_Lead"
           ],
           "value": {
-            "ID_Lead": "={{ $json.ID_Lead }}",
-            "Estado": "={{ $json.nuevo_estado }}",
-            "Cadencia_Paso": "={{ (Number($json.Cadencia_Paso)||3) + 1 }}",
-            "Num_Toques": "={{ (Number($json.Num_Toques)||0) + 1 }}",
-            "Ultimo_Contacto": "={{ $json.hoy }}",
-            "Fecha_Siguiente_Paso": "={{ $json.fecha_siguiente_paso }}",
-            "Asunto": "={{ $json.asunto }}",
-            "Notas": "={{ 'seguimiento:' + $json.tipo_toque + ' | ' + $json.razon }}"
+            "ID_Lead": "={{ $('Parsear + firma').item.json.ID_Lead }}",
+            "Estado": "={{ $('Parsear + firma').item.json.nuevo_estado }}",
+            "Cadencia_Paso": "={{ (Number($('Parsear + firma').item.json.Cadencia_Paso)||3) + 1 }}",
+            "Num_Toques": "={{ (Number($('Parsear + firma').item.json.Num_Toques)||0) + 1 }}",
+            "Ultimo_Contacto": "={{ $('Parsear + firma').item.json.hoy }}",
+            "Fecha_Siguiente_Paso": "={{ $('Parsear + firma').item.json.fecha_siguiente_paso }}",
+            "Asunto": "={{ $('Parsear + firma').item.json.asunto }}",
+            "Notas": "={{ 'seguimiento:' + $('Parsear + firma').item.json.tipo_toque + ' | ' + $('Parsear + firma').item.json.razon }}"
           }
         },
-        "options": {}
+        "options": {},
+        "resource": "sheet"
       },
       "id": "upd",
       "name": "Actualizar toque",

@@ -1,0 +1,425 @@
+{
+  "name": "ICP · 09 Investigación profunda de cuentas (dossier)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 09 · Investigacion profunda AUTONOMA (DOSSIER)\nNADIE pone 'SI' a mano. El nodo 'Seleccionar cuentas (autonomo)' lee TODO el CRM y decide solo a quien investigar por señal comercial:\n- agendado/respondio = 100 (dossier antes de la junta)\n- handoff = 90, contactada sin dossier = 80\n- SECTOR CALIENTE = 70 (si una cuenta del sector respondio, replica la receta al resto del sector)\n- re-investiga cada 30 dias (ninguna cuenta queda rezagada)\nCorre 3x al dia (L-V 8/13/18h) para dar dossier a quien responde ANTES de agendar; maximo 5 por corrida. ACUMULA en 'Investigacion' (nunca borra) y marca la fecha en Leads. Investigar_Profundo=SI queda como override manual OPCIONAL.\nCredenciales: Google Sheets, Header Auth (Anthropic), Serper. Pestana 'Investigacion' + en Leads: Investigar_Profundo, Ultima_Investigacion.",
+        "height": 260,
+        "width": 480
+      },
+      "id": "n0",
+      "name": "Guía",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 15,18 * * 1-6"
+            }
+          ]
+        }
+      },
+      "id": "t",
+      "name": "3× al día (L-V 8/13/18)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        280,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "read",
+      "name": "Leer todo el CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        500,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// SELECCION AUTONOMA: nadie pone 'SI' a mano. Decide por señal comercial + replica la receta de exito por sector.\nconst days=(f)=>{const s=String(f||'').slice(0,10);if(!s)return 99999;const t=Date.parse(s);return isNaN(t)?99999:Math.floor((Date.now()-t)/86400000);};\nconst norm=s=>String(s||'').toLowerCase().trim();\nconst leads=$input.all().map(i=>i.json).filter(l=>l&&l.ID_Lead);\n// Sectores CALIENTES: donde ya hubo una respuesta/avance que hizo sentido -> replicar al resto del sector.\nconst HOT=new Set();for(const l of leads){if(['respondio','agendado','lead_handoff','ganado'].includes(norm(l.Estado)))HOT.add(norm(l.Sector));}\nconst vivas=['no_contactado','contactado','respondio','agendado','nurturing','lead_handoff'];\nconst out=[];\nfor(const l of leads){const est=norm(l.Estado);const man=['si','sí'].includes(norm(l.Investigar_Profundo));const ant=days(l.Ultima_Investigacion);\n if(ant<=7&&!man)continue;                 // investigada hace poco -> no gastar creditos\n if(!vivas.includes(est)&&!man)continue;   // solo cuentas vivas (o override manual)\n let p=0,m='';\n if(est==='agendado'||est==='respondio'){p=100;m='reunion/respuesta: dossier previo a la junta';}\n else if(man){p=95;m='override manual';}\n else if(est==='lead_handoff'){p=90;m='handoff al cierre';}\n else if(est==='contactado'&&ant>=99999){p=80;m='contactada sin dossier';}\n else if(HOT.has(norm(l.Sector))&&ant>=99999){p=70;m='sector caliente: receta de exito';}\n else if(ant>=30){p=40;m='re-investigacion (>30 dias)';}\n else if(ant>=99999){p=30;m='nunca investigada';}\n else continue;\n out.push({...l,_prioridad:p,_motivo:m});}\nout.sort((a,b)=>(b._prioridad-a._prioridad)||((Number(b.Pre_Score)||0)-(Number(a.Pre_Score)||0)));\nreturn out.slice(0,8).map(j=>({json:j}));"
+      },
+      "id": "sel",
+      "name": "Seleccionar cuentas (autónomo)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": 5
+      },
+      "id": "lim",
+      "name": "Máx 5/día",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        890,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const l=$json;\nconst emp=l.Empresa||'';\nconst q1 = `\"${emp}\" ${l.Ciudad||''} sitio oficial LinkedIn director general CEO director de TI sistemas contacto`;\nconst q2 = `\"${emp}\" ${l.Sector||''} noticias certificaciones ISO cumplimiento tecnologia ERP vacante sistemas ciberseguridad incidente 2025 2026`;\nreturn [{json:{...l, q1, q2}}];"
+      },
+      "id": "prep",
+      "name": "Prep investigacion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://google.serper.dev/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "REEMPLAZA_SERPER_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ q: $('Prep investigacion').item.json.q1, gl:'mx', hl:'es', num:10 }) }}",
+        "options": {}
+      },
+      "id": "s1",
+      "name": "Buscar: empresa+contacto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://google.serper.dev/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "REEMPLAZA_SERPER_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ q: $('Prep investigacion').item.json.q2, gl:'mx', hl:'es', num:10 }) }}",
+        "options": {}
+      },
+      "id": "s2",
+      "name": "Buscar: sector+riesgo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const l=$('Prep investigacion').item.json;\nfunction org(node){ try{const r=$(node).first().json; return (r&&r.organic?r.organic:[]).slice(0,10).map(o=>({t:o.title,l:o.link,s:o.snippet}));}catch(e){return [];} }\nconst R1=org('Buscar: empresa+contacto'); const R2=org('Buscar: sector+riesgo');\nconst system=[\n'<identidad>Investigador comercial B2B senior y consultor de ciberseguridad/GRC de ACCES GROUP. Dossier estrategico de cuenta, ejecutivo, accionable y RICO EN DATOS, SOLO con lo provisto + conocimiento del portafolio ACCES. Exprime al maximo la evidencia de los resultados web (nombres, cargos, cifras, fechas, clientes, tecnologias, certificaciones). Separa dato confirmado / inferencia / pendiente. Cita fuentes (URLs). NO inventes; si no aparece, \"no encontrado publicamente\".</identidad>',\n'<portafolio>Consulting (gobierno TI, riesgo, ISO 27001/22301, BIA/BCP/DRP), Audit (auditoria de sistemas, cyber, NIST, regulatoria), Solutions (nube hibrida, redes criticas, continuidad, SASE), IT (SOC/NOC/CISO/BaaS 24x7, pentesting infra/web/APIs/OT, Red/Blue Team, DevSecOps, phishing), Training.</portafolio>',\n'<confianza>La CONFIANZA (0-100) mide cuanta evidencia CONFIRMADA CON FUENTE (URL) sustenta el dossier. Cuenta los datos confirmados con fuente (identidad, sede, antiguedad, canales, clientes/retailers, redes, contacto). REGLA DURA: si hay 5 o mas datos confirmados con fuente, la CONFIANZA NO puede ser menor a 60; 70-90 cuando la mayor parte del dossier se apoya en datos confirmados; 45-60 si es mixto; menor a 40 solo si casi todo es inferencia sin fuentes. Evalua SOLO por la evidencia web que te doy. NUNCA cites, menciones ni heredes ningun porcentaje de confianza que venga en las notas o el historial de la cuenta; si aparece uno, esta PROHIBIDO repetirlo en el dossier. No infles inventando.</confianza>',\n'<salida>Devuelve SOLO el dossier en MARKDOWN (sin JSON, sin comillas triples), secciones exactas cada una con \"### \":\\n### RESUMEN\\n### IDENTIDAD\\n### SECTOR Y CRITICIDADES\\n### RIESGOS\\n### INFRAESTRUCTURA PROBABLE\\n### CUMPLIMIENTO\\n### BUSINESS CASE ACCES\\n### DECISORES\\n### ABOGADO DEL DIABLO\\n### SIGUIENTE PASO\\n### FUENTES\\nAl final una linea: CONFIANZA: NN (0-100). En Business case, solucion ACCES entre parentesis. Lenguaje de negocio.</salida>'\n].join('\\n');\nconst notas=String(l.Notas||'').replace(/conf(ianza)?\\s*\\d{1,3}\\s*%/gi,'').replace(/investigado[^|]*/gi,'').replace(/enriquecido[^|]*/gi,'').replace(/dossier[^|]*/gi,'').replace(/\\|\\s*(\\|\\s*)+/g,'| ').replace(/^[\\s|]+|[\\s|]+$/g,'').trim();\nconst user=`CUENTA: ${l.Empresa} | Micro-ICP ${l.Micro_ICP} | Sector ${l.Sector} | Ciudad ${l.Ciudad||''} ${l.Estado_Region||''}\\nContacto: ${l.Contacto||'-'} (${l.Cargo||'-'}) ${l.Correo||''}\\nGancho: ${l.Gancho}\\nDato util interno (SIN metricas de confianza): ${notas||'-'}\\n--- WEB empresa/contacto ---\\n${JSON.stringify(R1,null,1)}\\n--- WEB sector/riesgo/tecnologia ---\\n${JSON.stringify(R2,null,1)}\\nConstruye el dossier en Markdown, exprimiendo al maximo la evidencia.`;\nreturn [{json:{...l, system, user}}];"
+      },
+      "id": "dos",
+      "name": "Armar dossier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model:'claude-sonnet-5', max_tokens:8000, system:$json.system, messages:[{role:'user',content:$json.user}] }) }}",
+        "options": {}
+      },
+      "id": "cl",
+      "name": "Claude: Dossier",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1700,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let text=''; try{const _b=$json.content||[];const _t=_b.find(x=>x&&x.type==='text');text=_t?_t.text:'';}catch(e){text='';}\ntext=(text||'').replace(/^```(markdown)?/i,'').replace(/```$/,'').trim();\nconst l=$('Armar dossier').item.json;\nconst hoy=$now.toFormat('yyyy-LL-dd');\nfunction sec(n){const m=text.match(new RegExp('###\\\\s*'+n+'[^\\\\n]*\\\\n([\\\\s\\\\S]*?)(?=\\\\n###\\\\s|$)','i'));return m?m[1].trim():'';}\nconst conf=(text.match(/CONFIANZA[:\\s]*([0-9]{1,3})/i)||[])[1]||70;\nlet notas=l.Notas||''; notas+=` | investigado ${hoy} (dossier conf ${conf}%)`;\nreturn [{json:{\n inv:{Fecha:hoy,ID_Lead:l.ID_Lead,Empresa:l.Empresa,Sector:l.Sector,\n  Resumen:sec('RESUMEN')||text.slice(0,400),\n  Dossier_MD:text||'(sin contenido)',\n  Riesgos_Clave:sec('RIESGOS'),BusinessCase_ACCES:sec('BUSINESS CASE'),\n  Decisores:sec('DECISORES'),Abogado_Diablo:sec('ABOGADO'),\n  Siguiente_Paso:sec('SIGUIENTE PASO'),Fuentes:sec('FUENTES'),Confianza:conf},\n ID_Lead:l.ID_Lead,Ultima_Investigacion:hoy,Investigar_Profundo:'no',Notas:notas\n}}];"
+      },
+      "id": "map",
+      "name": "Mapear dossier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1900,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Investigacion",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $json.inv.Fecha }}",
+            "ID_Lead": "={{ $json.inv.ID_Lead }}",
+            "Empresa": "={{ $json.inv.Empresa }}",
+            "Sector": "={{ $json.inv.Sector }}",
+            "Resumen": "={{ $json.inv.Resumen }}",
+            "Dossier_MD": "={{ $json.inv.Dossier_MD }}",
+            "Riesgos_Clave": "={{ $json.inv.Riesgos_Clave }}",
+            "BusinessCase_ACCES": "={{ $json.inv.BusinessCase_ACCES }}",
+            "Decisores": "={{ $json.inv.Decisores }}",
+            "Abogado_Diablo": "={{ $json.inv.Abogado_Diablo }}",
+            "Siguiente_Paso": "={{ $json.inv.Siguiente_Paso }}",
+            "Fuentes": "={{ $json.inv.Fuentes }}",
+            "Confianza": "={{ $json.inv.Confianza }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "app",
+      "name": "Guardar dossier (append)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2120,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "ID_Lead"
+          ],
+          "value": {
+            "ID_Lead": "={{ $json.ID_Lead }}",
+            "Ultima_Investigacion": "={{ $json.Ultima_Investigacion }}",
+            "Investigar_Profundo": "={{ $json.Investigar_Profundo }}",
+            "Notas": "={{ $json.Notas }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "upd",
+      "name": "Marcar en Leads (no borra)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2120,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "Cada día 6:00": {
+      "main": [
+        [
+          {
+            "node": "Leer todo el CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer todo el CRM": {
+      "main": [
+        [
+          {
+            "node": "Seleccionar cuentas (autónomo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seleccionar cuentas (autónomo)": {
+      "main": [
+        [
+          {
+            "node": "Máx 5/día",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Máx 5/día": {
+      "main": [
+        [
+          {
+            "node": "Prep investigacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep investigacion": {
+      "main": [
+        [
+          {
+            "node": "Buscar: empresa+contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar: empresa+contacto": {
+      "main": [
+        [
+          {
+            "node": "Buscar: sector+riesgo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar: sector+riesgo": {
+      "main": [
+        [
+          {
+            "node": "Armar dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar dossier": {
+      "main": [
+        [
+          {
+            "node": "Claude: Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Dossier": {
+      "main": [
+        [
+          {
+            "node": "Mapear dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear dossier": {
+      "main": [
+        [
+          {
+            "node": "Guardar dossier (append)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Marcar en Leads (no borra)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

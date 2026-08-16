@@ -1,0 +1,313 @@
+{
+  "name": "ICP · 08 EXPLORA MERCADOS (investiga sectores nuevos)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 08 · EXPLORA MERCADOS\nToma sectores con Estado=por_robustecer (tab 'Sectores'), investiga en web (Serper), Claude escribe la FICHA estilo INTELIGENCIA_SECTORES.md con peso sugerido, y guarda ficha+peso en el Sheet + borrador a Ricardo para revisar y pegar en el .md.\nCredenciales: Google Sheets, Header Auth, Serper. Crea la pestaña 'Sectores' con columnas: Sector, Estado, Peso, Resumen, Ficha_md, Fuentes. Semilla: Construccion, Mineria, Energia, Automotriz, Turismo, Logistica.",
+        "height": 260,
+        "width": 480
+      },
+      "id": "n0",
+      "name": "Guía",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -60
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "t",
+      "name": "Ejecutar manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        300,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sectores",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Estado",
+              "lookupValue": "por_robustecer"
+            }
+          ]
+        },
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
+      },
+      "id": "read",
+      "name": "Sectores por robustecer",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        520,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst s=$json;\nconst query = `${s.Sector} Mexico ciberseguridad incidentes regulacion 2025 2026 madurez continuidad`;\nreturn [{json:{...s, query}}];\n"
+      },
+      "id": "prep",
+      "name": "Prep sector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://google.serper.dev/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "REEMPLAZA_SERPER_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ q: $json.query, gl:'mx', hl:'es', num:10 }) }}",
+        "options": {}
+      },
+      "id": "serp",
+      "name": "Buscar en web (Serper)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst res=$json; const org=(res.organic||[]).slice(0,8).map(o=>({t:o.title,l:o.link,s:o.snippet}));\nconst s=$('Prep sector').item.json;\nconst system=[\n'<identidad>Analista de inteligencia sectorial de ACCES GROUP (ciberseguridad/GRC/continuidad). Construyes fichas de sector para calificar cuentas, con el estilo de INTELIGENCIA_SECTORES.md: por que es prioritario, subsectores/urgencia, drivers regulatorios con fecha, dolores->solucion ACCES->gancho, interlocutores, tickets, triggers de compra. Solo con lo provisto + conocimiento del portafolio ACCES. Sin inventar cifras sin fuente.</identidad>',\n'<portafolio>Auditoria, Pentesting, SOC/NOC as a Service, CISO as a Service, gestion de terceros, BIA/BCP/DRP, seguridad cloud/APIs, DevSecOps, respuesta a incidentes, concientizacion, administrados 24x7, gobierno IT/OT, ISO 27001.</portafolio>',\n'<reglas>Gancho consultivo = impacto al NEGOCIO (multa, paro, auditoria, licencia), no miedo tecnico. Da un PESO sugerido 0-30 para el pre-score del sector y su justificacion. Marca fechas regulatorias vivas.</reglas>',\n'<salida>SOLO JSON: {\"sector\":\"\",\"peso_sugerido\":0,\"por_que_prioritario\":\"\",\"subsectores\":\"\",\"drivers_regulatorios\":\"\",\"dolores_solucion_gancho\":\"\",\"interlocutores\":\"\",\"triggers_compra\":\"\",\"ficha_md\":\"\",\"fuentes\":[]}</salida>'].join('\\n');\nconst user=`Sector a robustecer: ${s.Sector}\\nResultados de busqueda:\\n${JSON.stringify(org,null,1)}\\n\\nEscribe la ficha de inteligencia del sector (ficha_md en Markdown lista para pegar en INTELIGENCIA_SECTORES.md). Devuelve solo el JSON.`;\nreturn [{json:{...s, system, user}}];\n"
+      },
+      "id": "fi",
+      "name": "Ficha sector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model:'claude-sonnet-5', max_tokens:2200, system:$json.system, messages:[{role:'user',content:$json.user}] }) }}",
+        "options": {}
+      },
+      "id": "cl",
+      "name": "Claude: Ficha de sector",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nlet d={};try{const _b=$json.content||[];const _t=_b.find(x=>x&&x.type==='text');d=JSON.parse((_t?_t.text:'{}').replace(/^```json/i,'').replace(/```$/,'').trim());}catch(e){d={};}\nconst s=$('Ficha sector').item.json;\nreturn [{json:{Sector:s.Sector,Peso:d.peso_sugerido||5,Estado:'robustecido',\n Resumen:(d.por_que_prioritario||'').slice(0,400),\n Ficha_md:d.ficha_md||'',\n Fuentes:(d.fuentes||[]).join(' | '),\n asunto:'Ficha de sector — '+s.Sector,\n cuerpo:'<h2>Ficha: '+s.Sector+'</h2><pre style=\"white-space:pre-wrap;font-family:inherit\">'+(d.ficha_md||'').replace(/</g,'&lt;')+'</pre>'}}];\n"
+      },
+      "id": "map",
+      "name": "Mapear ficha",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sectores",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Sector"
+          ],
+          "value": {
+            "Sector": "={{ $json.Sector }}",
+            "Estado": "robustecido",
+            "Peso": "={{ $json.Peso }}",
+            "Resumen": "={{ $json.Resumen }}",
+            "Ficha_md": "={{ $json.Ficha_md }}",
+            "Fuentes": "={{ $json.Fuentes }}"
+          }
+        },
+        "options": {},
+        "resource": "sheet"
+      },
+      "id": "upd",
+      "name": "Guardar ficha",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1740,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "operation": "create",
+        "subject": "={{ $json.asunto }}",
+        "bodyContent": "={{ $json.cuerpo }}",
+        "additionalFields": {
+          "bodyContentType": "html",
+          "toRecipients": "rvarela@accesgroup.com.mx"
+        }
+      },
+      "id": "draft",
+      "name": "Outlook: borrador ficha",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1740,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Ejecutar manual": {
+      "main": [
+        [
+          {
+            "node": "Sectores por robustecer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sectores por robustecer": {
+      "main": [
+        [
+          {
+            "node": "Prep sector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep sector": {
+      "main": [
+        [
+          {
+            "node": "Buscar en web (Serper)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar en web (Serper)": {
+      "main": [
+        [
+          {
+            "node": "Ficha sector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ficha sector": {
+      "main": [
+        [
+          {
+            "node": "Claude: Ficha de sector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Ficha de sector": {
+      "main": [
+        [
+          {
+            "node": "Mapear ficha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear ficha": {
+      "main": [
+        [
+          {
+            "node": "Guardar ficha",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Outlook: borrador ficha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

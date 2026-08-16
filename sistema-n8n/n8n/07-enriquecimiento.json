@@ -1,0 +1,323 @@
+{
+  "name": "ICP · 07 Enriquecimiento de contactos (autónomo)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 07 · Enriquecimiento (autónomo)\nDiario: toma leads con Enriquecer=SÍ, busca en web (Serper) el canal real, Claude extrae SOLO lo verificable (no inventa), actualiza el CRM y RE-ENCOLA (Estado=no_contactado) al encontrar correo.\nCredenciales: Google Sheets, Header Auth (Anthropic), Serper (X-API-KEY). Reemplaza 1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M y REEMPLAZA_SERPER_KEY.",
+        "height": 240,
+        "width": 470
+      },
+      "id": "n0",
+      "name": "Guía",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 14 * * 1-6"
+            }
+          ]
+        }
+      },
+      "id": "t",
+      "name": "Cada día 7:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        300,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Enriquecer",
+              "lookupValue": "SÍ"
+            }
+          ]
+        },
+        "options": {},
+        "resource": "sheet",
+        "operation": "read"
+      },
+      "id": "read",
+      "name": "Leads a enriquecer",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        520,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": 20
+      },
+      "id": "limit",
+      "name": "Máx 20/día",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        740,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst l=$json;\nconst query = `${l.Empresa} ${l.Ciudad||''} ${l.Estado_Region||''} contacto correo director gerente`;\nreturn [{json:{...l, query}}];\n"
+      },
+      "id": "prep",
+      "name": "Prep búsqueda",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://google.serper.dev/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "REEMPLAZA_SERPER_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ q: $json.query, gl:'mx', hl:'es', num:10 }) }}",
+        "options": {}
+      },
+      "id": "serp",
+      "name": "Buscar en web (Serper)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst res = $json; const org = (res.organic||[]).slice(0,8).map(o=>({t:o.title,l:o.link,s:o.snippet}));\nconst l = $('Prep búsqueda').item.json;\nconst system=[\n'<identidad>Investigador OSINT B2B de ACCES GROUP. Extrae SOLO datos de contacto verificables de los resultados. NO inventes correos ni adivines patrones.</identidad>',\n'<reglas>Prefiere dominio corporativo propio. Si solo hay dominio (sin correo), sugiere canal (sitio/telefono/LinkedIn) pero marca correo=\"\" y encontrado=false para correo. Da confianza 0-100 y la URL fuente.</reglas>',\n'<salida>SOLO JSON: {\"correo\":\"\",\"telefono\":\"\",\"web\":\"\",\"linkedin\":\"\",\"fuente_url\":\"\",\"confianza\":0,\"encontrado\":false,\"nota\":\"\"}</salida>'].join('\\n');\nconst user = `Empresa: ${l.Empresa} | Ciudad: ${l.Ciudad||''} ${l.Estado_Region||''}\\nResultados de busqueda:\\n${JSON.stringify(org,null,1)}\\n\\nExtrae el mejor canal de contacto verificable. Devuelve solo el JSON.`;\nreturn [{json:{...l, system, user}}];\n"
+      },
+      "id": "ext",
+      "name": "Extraer contacto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model:'claude-sonnet-5', max_tokens:900, system:$json.system, messages:[{role:'user',content:$json.user}] }) }}",
+        "options": {}
+      },
+      "id": "cl",
+      "name": "Claude: Extraer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let d={}, parseOk=true;\ntry{const _b=$json.content||[];const _t=_b.find(x=>x&&x.type==='text');d=JSON.parse((_t?_t.text:'{}').replace(/^```json/i,'').replace(/```$/,'').trim());}catch(e){parseOk=false;d={};}\nconst l=$('Extraer contacto').item.json;\nconst found=!!(d.correo&&d.correo.includes('@'));\nconst tel=d.telefono||l.Telefono||'';\nconst hasPhone=String(tel).replace(/[^0-9]/g,'').length>=7;\n// Si Claude NO respondio (error transitorio) reintentar luego; si respondio, una sola vez y parar\nconst enriquecer=(!parseOk)?'SÍ':'no';\nreturn [{json:{ID_Lead:l.ID_Lead,\n Correo: found? d.correo : (l.Correo||''),\n Telefono: tel,\n Web: d.web||l.Web||'',\n Correo_Estado: found?'ok':(parseOk?'sin_correo':(l.Correo_Estado||'faltante')),\n Enriquecer: enriquecer,\n Estado: found? 'no_contactado' : ((parseOk&&hasPhone)? 'llamar_manual' : (l.Estado||'descartado')),\n Notas: (l.Notas||'')+` | enriquecido ${found?('OK '+(d.confianza||'')+'% '+(d.fuente_url||'')):(parseOk?('sin correo'+(hasPhone?' -> LLAMAR MANUAL (tiene telefono)':' (sin telefono)')+'; '+(d.nota||'')+' '+(d.linkedin||'')):'error transitorio, se reintenta')}`\n}}];"
+      },
+      "id": "map",
+      "name": "Mapear update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1740,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WHdthE5oouc6FRZUvl8yNHJT_EFQ3iFvKPUHqckBr7M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "ID_Lead"
+          ],
+          "value": {
+            "ID_Lead": "={{ $json.ID_Lead }}",
+            "Correo": "={{ $json.Correo }}",
+            "Telefono": "={{ $json.Telefono }}",
+            "Web": "={{ $json.Web }}",
+            "Correo_Estado": "={{ $json.Correo_Estado }}",
+            "Enriquecer": "={{ $json.Enriquecer }}",
+            "Estado": "={{ $json.Estado }}",
+            "Notas": "={{ $json.Notas }}"
+          }
+        },
+        "options": {},
+        "resource": "sheet"
+      },
+      "id": "upd",
+      "name": "Actualizar CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1940,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Cada día 7:00": {
+      "main": [
+        [
+          {
+            "node": "Leads a enriquecer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leads a enriquecer": {
+      "main": [
+        [
+          {
+            "node": "Máx 20/día",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Máx 20/día": {
+      "main": [
+        [
+          {
+            "node": "Prep búsqueda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep búsqueda": {
+      "main": [
+        [
+          {
+            "node": "Buscar en web (Serper)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar en web (Serper)": {
+      "main": [
+        [
+          {
+            "node": "Extraer contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer contacto": {
+      "main": [
+        [
+          {
+            "node": "Claude: Extraer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Extraer": {
+      "main": [
+        [
+          {
+            "node": "Mapear update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear update": {
+      "main": [
+        [
+          {
+            "node": "Actualizar CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
